@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Streamlit secrets (never commit API keys)
+.streamlit/secrets.toml
+
+# OS / editor
+.DS_Store
+.qodo/
+.idea/
+.vscode/
+
+# Local browser/test artifacts (not part of the project)
+.playwright-mcp/
+sage-streamlit-demo.png

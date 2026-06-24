@@ -1,0 +1,16 @@
+# Core data + numerics
+yfinance>=0.2.40
+pandas>=2.0
+
+# CLI / web UI
+rich>=13.0
+streamlit>=1.30
+
+# HTTP (used to talk to a local Ollama server)
+requests>=2.31
+
+# Optional paid backend (only needed for the "claude" engine)
+anthropic>=0.40
+
+# Tests
+pytest>=8.0
