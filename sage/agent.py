@@ -621,7 +621,10 @@ def parse_react_output(text: str) -> dict:
             }
         return out
 
-    action_match = re.search(r"Action:\s*([A-Za-z_][A-Za-z0-9_]*)", text, re.IGNORECASE)
+    # Dots are allowed so a namespaced call ("tool.get_quote") survives parsing
+    # intact. Truncating at the dot would rename an unknown tool to its
+    # namespace, and the trace would then report a failure that never happened.
+    action_match = re.search(r"Action:\s*([A-Za-z_][A-Za-z0-9_.]*)", text, re.IGNORECASE)
     input_match = re.search(r"Action Input:\s*(.+)", text, re.IGNORECASE | re.DOTALL)
     if action_match:
         out["kind"] = "action"
@@ -1040,6 +1043,16 @@ class GroqEngine(LLMEngine):
         arguments = attempted.get("arguments", {})
         if not isinstance(tool, str) or not tool:
             return None
+
+        # Models namespace their native calls — "tool.get_quote",
+        # "functions.get_quote" — and the registry holds the bare name. Keep the
+        # last segment, but only when that actually names a real tool, so a
+        # genuinely unknown call still reaches the loop as an unknown tool and
+        # is reported rather than silently rewritten into something else.
+        if tool not in TOOL_REGISTRY and "." in tool:
+            candidate = tool.rsplit(".", 1)[-1]
+            if candidate in TOOL_REGISTRY:
+                tool = candidate
         if isinstance(arguments, str):  # some models stringify the arguments
             arguments = _loads_loose(arguments) or {}
         if not isinstance(arguments, dict):

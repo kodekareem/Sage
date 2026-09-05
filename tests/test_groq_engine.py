@@ -140,3 +140,50 @@ def test_groq_engine_is_registered_and_falls_back_without_a_key(monkeypatch):
     monkeypatch.setattr(config, "get_groq_key", lambda: None)
     assert config.groq_available() is False
     assert config.resolve_engine("groq") == "rule"
+
+
+def test_recovery_strips_a_namespaced_tool_name(engine, monkeypatch):
+    """`tool.get_quote` maps to the registered `get_quote`.
+
+    GPT-OSS models namespace their native calls. Left as-is, every recovered
+    call named a tool the registry does not hold, so each step failed and the
+    run spun to its step cap without answering.
+    """
+    rejection = {
+        "error": {
+            "code": "tool_use_failed",
+            "failed_generation": json.dumps(
+                {"name": "tool.get_quote", "arguments": {"ticker": "NVDA"}}
+            ),
+        }
+    }
+    monkeypatch.setattr("requests.post", lambda *a, **k: FakeResponse(400, rejection))
+
+    from sage.agent import parse_react_output
+
+    parsed = parse_react_output(engine.complete([{"role": "user", "content": "x"}]))
+    assert parsed["action"] == "get_quote"
+    assert parsed["action_input"] == {"ticker": "NVDA"}
+
+
+def test_recovery_keeps_an_unknown_tool_name_intact(engine, monkeypatch):
+    """An unrecognised call is passed through, not rewritten into a real tool.
+
+    Stripping blindly would turn `assistant` or `foo.bar` into whatever came
+    last, hiding a genuine failure. The loop should see the unknown name and
+    report it.
+    """
+    rejection = {
+        "error": {
+            "code": "tool_use_failed",
+            "failed_generation": json.dumps(
+                {"name": "namespace.not_a_real_tool", "arguments": {}}
+            ),
+        }
+    }
+    monkeypatch.setattr("requests.post", lambda *a, **k: FakeResponse(400, rejection))
+
+    from sage.agent import parse_react_output
+
+    parsed = parse_react_output(engine.complete([{"role": "user", "content": "x"}]))
+    assert parsed["action"] == "namespace.not_a_real_tool"

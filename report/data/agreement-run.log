@@ -19,31 +19,27 @@ rule engine:
 
 groq engine:
   ok  S1: 4 steps -> HOLD
-  BAD S2: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on output tokens per minute (OTPM): Limit 1000, Used 970, Requested 656. Please try again in 37.56s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-  ok  S3: 4 steps -> SELL
-  BAD S4: 1 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on output tokens per minute (OTPM): Limit 1000, Used 367, Requested 635. Please try again in 120ms. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
+  BAD S2: 2 steps -> LLM call failed: 400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions
+  BAD S3: 4 steps -> LLM call failed: 400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions
+  ok  S4: 3 steps -> HOLD
   ok  S5: 4 steps -> HOLD
-  ok  S6: 4 steps -> HOLD
-  BAD C1: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on output tokens per minute (OTPM): Limit 1000, Used 525, Requested 617. Please try again in 8.52s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-  ok  C2: 7 steps -> BUY
-  ok  C3: 7 steps -> NVDA is stronger
-  BAD C4: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198980, Requested 1113. Please try again in 40.176s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-  BAD P1: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199334, Requested 1146. Please try again in 3m27.36s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-  BAD P2: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199139, Requested 1137. Please try again in 1m59.232s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-  ok  R1: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199502, Requested 1132. Please try again in 4m33.888s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput ca  BAD C4: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199341, Requested 918. Please try again in 1m51.887999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-  BAD P1: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199128, Requested 966. Please try again in 40.608s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-  BAD P2: 1 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199344, Requested 763. Please try again in 46.224s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-  BAD R1: 1 steps -> HOLD
-  ok  R2: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199748, Requested 618. Please try again in 2m38.112s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-  ok  R3: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199535, Requested 620. Please try again in 1m6.959999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
-
---- rule engine over 15 questions ---
-  trace validity      15/15  (100.0%)
-  groundedness        8/12  (66.7%)
-  tool appropriateness 12/12  (100.0%)
-  behaved as required 15/15  (100.0%)
-  mean steps          2.83
-  engine agreement    1/2 (50.0%)
-
-written to report\data\evaluation-offline.json
-EVALUATION COMPLETE
+  ok  S6: 3 steps -> HOLD
+  ok  C1: 5 steps -> HOLD for both, slight preference for MSFT
+  ok  C2: 2 steps -> BUY AAPL
+  ok  C3: 2 steps -> NVDA is stronger right now
+  ok  C4: 2 steps -> Microsoft is the preferable investment; Tesla is riskier and may be held or sold depending on risk tolerance
+  ok  P1: 2 steps -> BUY
+  ok  P2: 2 steps -> BUY
+Traceback (most recent call last):
+  File "C:\Users\pc\sage-project\scripts\run_evaluation.py", line 473, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\pc\sage-project\scripts\run_evaluation.py", line 435, in main
+    llm_rows = run_engine(args.engine, args.max_steps)
+  File "C:\Users\pc\sage-project\scripts\run_evaluation.py", line 400, in run_engine
+    print(f"  {flag} {row['id']}: {row['steps']} steps -> {row['verdict'] or row['error']}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2011' in position 46: character maps to <undefined>

@@ -46,6 +46,16 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
+# A model's verdict can contain any character it likes (a non-breaking hyphen
+# ended one run here), and Windows hands Python a cp1252 console that cannot
+# encode them. Without this the whole study crashes on the final print, after
+# every question has already been answered and paid for.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    except (AttributeError, ValueError):  # pragma: no cover - non-standard stream
+        pass
+
 import pandas as pd  # noqa: E402
 
 from sage import config, data_layer  # noqa: E402
