@@ -24,7 +24,18 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
 # current Sonnet model id and allow an override via the environment.
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 
-ENGINES = ("rule", "ollama", "claude")
+# Groq serves open-weight models behind an OpenAI-compatible API. It is fast and
+# has a free tier, which makes it the practical way to demonstrate the loop
+# driving a *real* LLM without needing a local GPU or a paid key.
+GROQ_URL = os.environ.get("GROQ_URL", "https://api.groq.com/openai/v1")
+# Qwen follows the plain-text Thought/Action/Action-Input format reliably. Some
+# other served models (notably the GPT-OSS family) reach for their built-in
+# function-calling mechanism instead, which Sage deliberately does not use — the
+# engine recovers from that, but a model that emits the text format is a better
+# demonstration of the loop.
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
+
+ENGINES = ("rule", "ollama", "groq", "claude")
 
 
 def get_anthropic_key() -> str | None:
@@ -55,6 +66,36 @@ def ollama_available(url: str = OLLAMA_URL, timeout: float = 0.5) -> bool:
         return False
 
 
+def get_groq_key() -> str | None:
+    """Return the Groq API key from the environment or Streamlit secrets.
+
+    Mirrors :func:`get_anthropic_key`: the environment wins, Streamlit secrets
+    are a fallback for the deployed app, and neither lookup may crash a CLI or
+    test run.
+    """
+    key = os.environ.get("GROQ_API_KEY")
+    if key:
+        return key
+    try:  # pragma: no cover - depends on Streamlit runtime
+        import streamlit as st
+
+        return st.secrets.get("GROQ_API_KEY")  # type: ignore[no-any-return]
+    except Exception:
+        return None
+
+
+def groq_available() -> bool:
+    """Return True if a Groq key is present and ``requests`` is importable."""
+    if get_groq_key() is None:
+        return False
+    try:
+        import requests  # noqa: F401
+
+        return True
+    except Exception:
+        return False
+
+
 def claude_available() -> bool:
     """Return True if an Anthropic key is present and the SDK is importable."""
     if get_anthropic_key() is None:
@@ -75,6 +116,8 @@ def resolve_engine(preferred: str | None) -> str:
     """
     if preferred == "ollama" and ollama_available():
         return "ollama"
+    if preferred == "groq" and groq_available():
+        return "groq"
     if preferred == "claude" and claude_available():
         return "claude"
     # "rule", an unavailable LLM engine, or no preference all land here.

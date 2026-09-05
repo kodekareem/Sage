@@ -45,7 +45,7 @@ sage/
   data_layer.py    yfinance wrapper + in-memory cache + graceful errors
   tools.py         The 6-tool analysis library + a registry the agent is given
   react.py         The shared ReAct data structures (Step / Action / Trace / Result)
-  agent.py         The three engines (rule / ollama / claude) behind one interface
+  agent.py         The four engines (rule / ollama / groq / claude) behind one interface
   display.py       CLI rendering of a trace
 app.py             Streamlit web app (the demo centerpiece)
 run.py             CLI entry point
@@ -58,7 +58,7 @@ tests/             pytest suite (offline — synthetic data, no network)
 |---|---|
 | **Data layer** (`data_layer.py`) | Pulls real OHLCV prices and fundamentals via `yfinance` (no API key). Caches per process; turns network/invalid-ticker failures into clear exceptions. |
 | **Tool library** (`tools.py`) | Six clean tools, each a pure function returning a structured dict, held in a `TOOL_REGISTRY` with JSON-schema-style descriptions so adding a tool is trivial. |
-| **ReAct agent** (`agent.py`) | One interface, three swappable engines, all emitting the **same** structured trace. |
+| **ReAct agent** (`agent.py`) | One interface, four swappable engines, all emitting the **same** structured trace. |
 | **Streamlit app** (`app.py`) | Chat-style input, expandable Thought/Action/Observation timeline, prominent final recommendation, engine + tool sidebar. |
 | **CLI** (`run.py`) | `python run.py ask "..."` — same engine, for testing and the demo. |
 
@@ -73,24 +73,27 @@ tests/             pytest suite (offline — synthetic data, no network)
 | `compare_tickers(tickers)` | Side-by-side key metrics for 2+ tickers |
 | `estimate_position_size(account_size, risk_pct, entry, stop)` | Risk-based position sizing |
 
-### The three engines (one interface)
+### The four engines (one interface)
 
-All three produce the identical `ReActResult` shape, so the UI and report never
+All four produce the identical `ReActResult` shape, so the UI and report never
 special-case an engine.
 
 | Engine | Description | Needs |
 |---|---|---|
 | **`rule`** (default) | Deterministic, free, no-key. Scripts sensible thoughts, calls the **real** tools in a sensible order against **real** data, records every observation, and derives a transparent buy/sell/hold (or comparison) verdict via bull/bear point scoring. Ties are reported as ties rather than broken arbitrarily. It genuinely walks the loop — it never shortcuts. This is what the deployed demo uses. | Nothing (only `yfinance` network) |
 | **`ollama`** | A real **local** LLM via [Ollama](https://ollama.com) (e.g. `llama3.2`), prompted to emit Thought/Action/Action-Input that Sage parses and executes. For genuine LLM reasoning at no cost on a local machine. | Ollama running at `localhost:11434` |
+| **`groq`** | A real **hosted** open-weight model (default `qwen/qwen3.8-27b`) through Groq's OpenAI-compatible API. Free tier, no GPU needed — the easiest way to see the loop driven by a genuine LLM. | `GROQ_API_KEY` ([free](https://console.groq.com)) |
 | **`claude`** | The same hand-rolled loop backed by the Anthropic API. | `ANTHROPIC_API_KEY` |
 
 The LLM loop is **hand-rolled** (no LangChain) — that's deliberate and keeps the
 reasoning loop legible. It is capped at `MAX_STEPS` to prevent runaway cost and
 infinite loops, and it handles malformed model output gracefully.
 
-> **Engine selection:** if a requested LLM engine isn't available (no Ollama / no
+> **Engine selection:** if a requested LLM engine isn't available (no Ollama, no
 > key), Sage automatically falls back to `rule`, so it always works out of the
-> box and deploys cleanly to Streamlit Cloud.
+> box and deploys cleanly to Streamlit Cloud. This is verified by
+> `scripts/verify_no_key_fallback.py`, which runs Sage with every credential
+> stripped from the environment.
 
 ---
 
@@ -110,6 +113,10 @@ pip install -r requirements.txt
 
 ### (Optional) enable the LLM engines
 
+- **Groq** (free, hosted — easiest): get a key at
+  [console.groq.com](https://console.groq.com), then
+  `export GROQ_API_KEY=...` (PowerShell: `$env:GROQ_API_KEY="..."`).
+  Select the `groq` engine. Override the model with `GROQ_MODEL` if you like.
 - **Ollama** (free, local): install Ollama, then `ollama pull llama3.2` and make
   sure `ollama serve` is running. Select the `ollama` engine.
 - **Claude** (paid): set `ANTHROPIC_API_KEY` in your environment, or copy
@@ -142,7 +149,7 @@ python run.py ask "Compare AAPL and MSFT for a long-term hold" --engine rule
 python run.py tools
 ```
 
-`--engine` accepts `rule` (default), `ollama`, or `claude`. `--max-steps` caps
+`--engine` accepts `rule` (default), `ollama`, `groq`, or `claude`. `--max-steps` caps
 the reasoning loop.
 
 ---
@@ -180,7 +187,9 @@ Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
 | `verify_encoding.py` | The CLI keeps its non-ASCII characters on a legacy cp1252 Windows console |
 | `verify_tool_coverage.py` | Every registered tool is genuinely reachable by the engine |
 | `verify_live.py` | Against **live** market data, every figure cited in the rationale traces back to a recorded observation |
-| `verify_llm_engine.py` | The ReAct loop against a **real** served model (needs Ollama or an API key; fails loudly rather than skipping) |
+| `verify_llm_engine.py` | The ReAct loop against a **real** served model — `--engine groq` (or `ollama`/`claude`); fails loudly rather than skipping when no backend is reachable |
+| `verify_no_secrets.py` | No API key or credential is committed to the repo |
+| `verify_no_key_fallback.py` | The app still works with every key stripped, as the deployed demo does |
 
 ---
 
@@ -189,8 +198,8 @@ Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
 1. Push this repo to GitHub.
 2. Create a new Streamlit app pointing at `app.py`.
 3. Done — it runs on the `rule` engine with no secrets. (Optionally add
-   `ANTHROPIC_API_KEY` in the app's Secrets to enable the `claude` engine; the
-   `ollama` engine is local-only and won't run on the Cloud.)
+   `GROQ_API_KEY` or `ANTHROPIC_API_KEY` in the app's Secrets to enable a real
+   LLM engine; the `ollama` engine is local-only and won't run on the Cloud.)
 
 ---
 
@@ -198,7 +207,7 @@ Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
 
 **Working**
 - The explainable ReAct loop and full structured trace share one data shape
-  across all three engines, so the UI and tests never special-case an engine.
+  across all four engines, so the UI and tests never special-case an engine.
 - The rule engine runs with zero keys and produces a genuine, inspectable,
   step-by-step trace from real market data — ideal for a reliable live demo. It
   is verified against **live** data, including that every figure quoted in a
@@ -210,11 +219,15 @@ Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
 
 **Verified to different depths — an honest distinction**
 - The **`rule`** engine is verified end-to-end against live market data.
-- The **LLM loop** is verified for control flow (unit tests), and for its real
-  network path — sockets, JSON, and malformed-output recovery — against a local
-  HTTP server. Its *reasoning quality* against a live model has **not** been
-  measured; run `python scripts/verify_llm_engine.py` with Ollama or an API key
-  to produce that evidence.
+- The **LLM loop** is verified three ways: control flow (unit tests), its real
+  network path against a local HTTP server (sockets, JSON, malformed-output
+  recovery), and **end-to-end against a real served model** on Groq
+  (`python scripts/verify_llm_engine.py --engine groq`), where a live model
+  chose tools, read real market data, recovered from a tool error, and produced
+  a grounded verdict.
+- What is still **not** measured is LLM reasoning *quality at scale*: there is
+  no rubric-scored question set and no rule-vs-LLM agreement study. That is the
+  main thing a fuller evaluation would add.
 
 **Limited**
 - The rule engine's verdict is a simple, transparent bull/bear point tally — it

@@ -119,3 +119,36 @@ def test_registry_has_all_expected_tools():
         "estimate_position_size",
     }
     assert expected <= set(tools.TOOL_REGISTRY)
+
+
+# --------------------------------------------------------------------------- #
+# Period validation on get_price_history
+# --------------------------------------------------------------------------- #
+def test_price_history_rejects_an_invalid_period():
+    """An unusable period is a structured error, not an exception."""
+    result = tools.get_price_history("AAPL", period="banana")
+    assert result["ok"] is False
+    assert "Invalid period" in result["error"]
+    # The error must tell the caller what IS allowed, so the agent can retry.
+    assert "6mo" in result["error"]
+
+
+def test_price_history_corrects_a_near_miss_and_says_so():
+    """'3m' is understood as '3mo', and the correction is visible in the trace.
+
+    A live LLM run produced exactly this slip, so the tool now recovers rather
+    than wasting a reasoning step — but it must not correct silently.
+    """
+    result = tools.get_price_history("AAPL", period="3m")
+    assert result["ok"] is True
+    assert result["period"] == "3mo"
+    assert "note" in result
+    assert "3m" in result["note"] and "3mo" in result["note"]
+
+
+def test_price_history_valid_period_has_no_correction_note():
+    """A correctly-specified period is passed through untouched."""
+    result = tools.get_price_history("AAPL", period="6mo")
+    assert result["ok"] is True
+    assert result["period"] == "6mo"
+    assert "note" not in result

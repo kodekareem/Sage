@@ -31,7 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sage import config
-from sage.agent import ClaudeEngine, OllamaEngine
+from sage.agent import ClaudeEngine, GroqEngine, OllamaEngine
 
 QUESTION = "Should I buy NVDA right now?"
 
@@ -43,6 +43,9 @@ def fail(message: str) -> None:
 
 def pick_engine(requested: str | None):
     """Return a live engine instance, or exit if none is reachable."""
+    if requested in (None, "groq") and config.groq_available():
+        print(f"backend: groq ({config.GROQ_MODEL} at {config.GROQ_URL})")
+        return GroqEngine()
     if requested in (None, "ollama") and config.ollama_available():
         print(f"backend: ollama ({config.OLLAMA_MODEL} at {config.OLLAMA_URL})")
         return OllamaEngine()
@@ -51,7 +54,8 @@ def pick_engine(requested: str | None):
         return ClaudeEngine()
 
     fail(
-        "no LLM backend is reachable.\n"
+        f"no LLM backend is reachable (requested: {requested or 'any'}).\n"
+        "  For Groq:    set GROQ_API_KEY (free key at https://console.groq.com)\n"
         "  For Ollama:  install it, run `ollama serve`, then `ollama pull llama3.2`\n"
         "  For Claude:  set ANTHROPIC_API_KEY in your environment\n"
         "This check deliberately fails rather than skipping, so that a passing\n"
@@ -61,7 +65,7 @@ def pick_engine(requested: str | None):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--engine", choices=("ollama", "claude"), default=None)
+    parser.add_argument("--engine", choices=("groq", "ollama", "claude"), default=None)
     args = parser.parse_args()
 
     engine = pick_engine(args.engine)

@@ -150,6 +150,20 @@ def get_quote(ticker: str) -> dict:
     }
 
 
+#: Period strings the data source accepts.
+VALID_PERIODS = ("1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max")
+
+#: Common near-misses an LLM produces, mapped to the real thing. Correcting an
+#: obvious slip is friendlier than bouncing the whole reasoning step, and the
+#: correction is reported in the observation so the trace stays honest.
+_PERIOD_ALIASES = {
+    "1m": "1mo", "3m": "3mo", "6m": "6mo", "12m": "1y",
+    "1month": "1mo", "3months": "3mo", "6months": "6mo",
+    "1week": "5d", "1w": "5d", "1year": "1y", "2year": "2y", "2years": "2y",
+    "ytd.": "ytd", "year": "1y", "daily": "1d",
+}
+
+
 @tool(
     name="get_price_history",
     description="Summary of historical prices over a period (start/end/high/low/return).",
@@ -157,12 +171,29 @@ def get_quote(ticker: str) -> dict:
         "ticker": {"type": "string", "description": "Stock symbol, e.g. AAPL"},
         "period": {
             "type": "string",
-            "description": "Look-back window: 1mo, 3mo, 6mo, 1y, 2y. Default 6mo.",
+            "description": (
+                "Look-back window. Must be exactly one of: 1d, 5d, 1mo, 3mo, "
+                "6mo, 1y, 2y, 5y, 10y, ytd, max. Default 6mo."
+            ),
         },
     },
 )
 def get_price_history(ticker: str, period: str = "6mo") -> dict:
     """Return a compact summary of price action over ``period``."""
+    corrected = None
+    if period not in VALID_PERIODS:
+        candidate = _PERIOD_ALIASES.get(str(period).strip().lower())
+        if candidate is None:
+            return {
+                "ok": False,
+                "ticker": ticker.upper(),
+                "error": (
+                    f"Invalid period {period!r}. Use one of: "
+                    f"{', '.join(VALID_PERIODS)}."
+                ),
+            }
+        corrected, period = period, candidate
+
     try:
         df = data_layer.fetch_history(ticker, period=period)
     except DataError as exc:
@@ -171,7 +202,7 @@ def get_price_history(ticker: str, period: str = "6mo") -> dict:
     close = df["Close"]
     start = float(close.iloc[0])
     end = float(close.iloc[-1])
-    return {
+    result = {
         "ok": True,
         "ticker": ticker.upper(),
         "period": period,
@@ -182,6 +213,10 @@ def get_price_history(ticker: str, period: str = "6mo") -> dict:
         "period_return_pct": round((end - start) / start * 100, 2) if start else 0.0,
         "num_days": int(len(close)),
     }
+    if corrected is not None:
+        # Say so in the observation rather than silently changing the request.
+        result["note"] = f"Interpreted period {corrected!r} as {period!r}."
+    return result
 
 
 @tool(

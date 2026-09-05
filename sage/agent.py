@@ -677,6 +677,10 @@ Final Answer: <a JSON object: {{"recommendation": "BUY|SELL|HOLD or a comparison
 Rules:
 - Output ONLY the Thought and the Action/Action Input (or Final Answer). No extra prose.
 - Use real tickers. Call tools before concluding. Do not invent numbers — read them from observations.
+- Write the Action as PLAIN TEXT in exactly the format above. Do NOT use your
+  built-in function/tool-calling mechanism and do NOT emit JSON of the form
+  {{"name": ..., "arguments": ...}} — Sage parses your text itself, and a native
+  tool call will be rejected.
 """
 
 
@@ -793,6 +797,97 @@ class OllamaEngine(LLMEngine):
         return resp.json()["message"]["content"]
 
 
+class GroqEngine(LLMEngine):
+    """Drives an open-weight model on Groq through the same ReAct loop.
+
+    Groq exposes an OpenAI-compatible ``/chat/completions`` endpoint, so the
+    message list the loop already maintains — including the ``system`` role —
+    can be posted unchanged. It runs open-weight models (Llama, Qwen, GPT-OSS)
+    on a free tier, which makes it the practical way to demonstrate the loop
+    driving a genuine LLM without a local GPU or a paid key.
+    """
+
+    name = "groq"
+
+    def __init__(self, model: str = config.GROQ_MODEL, url: str = config.GROQ_URL,
+                 max_steps: int = config.MAX_STEPS):
+        super().__init__(max_steps=max_steps)
+        self.model = model
+        self.url = url
+        self._key = config.get_groq_key()
+
+    def complete(self, messages: list[dict]) -> str:
+        import requests
+
+        response = requests.post(
+            f"{self.url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self._key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": self.model,
+                "messages": messages,
+                # Low temperature: we want the model to follow the ReAct format
+                # reliably, not to be creative about it.
+                "temperature": 0.2,
+                "max_tokens": 1024,
+            },
+            timeout=120,
+        )
+
+        # Sage parses tool calls out of the model's *text*, so no `tools` array
+        # is declared. A model that reaches for its native function-calling
+        # mechanism anyway is rejected by the API with a 400 that still carries
+        # the attempted call in `failed_generation`. Rather than lose the turn,
+        # translate that attempt back into the text format the loop expects.
+        if response.status_code == 400:
+            recovered = self._recover_native_tool_call(response)
+            if recovered is not None:
+                return recovered
+
+        response.raise_for_status()
+        payload = response.json()
+        try:
+            return payload["choices"][0]["message"]["content"] or ""
+        except (KeyError, IndexError, TypeError) as exc:
+            raise RuntimeError(f"Unexpected Groq response shape: {payload}") from exc
+
+    @staticmethod
+    def _recover_native_tool_call(response) -> Optional[str]:
+        """Turn a rejected native tool call into a plain-text ReAct action.
+
+        Returns ``None`` when the error is anything else, so genuine failures
+        still surface as errors instead of being silently swallowed.
+        """
+        try:
+            error = response.json().get("error", {})
+        except ValueError:
+            return None
+
+        if error.get("code") != "tool_use_failed":
+            return None
+
+        attempted = _loads_loose(error.get("failed_generation", "") or "")
+        if not isinstance(attempted, dict):
+            return None
+
+        tool = attempted.get("name")
+        arguments = attempted.get("arguments", {})
+        if not isinstance(tool, str) or not tool:
+            return None
+        if isinstance(arguments, str):  # some models stringify the arguments
+            arguments = _loads_loose(arguments) or {}
+        if not isinstance(arguments, dict):
+            arguments = {}
+
+        return (
+            "Thought: (recovered from a native tool call)\n"
+            f"Action: {tool}\n"
+            f"Action Input: {json.dumps(arguments)}"
+        )
+
+
 class ClaudeEngine(LLMEngine):
     """Drives the Anthropic API through the same hand-rolled ReAct loop."""
 
@@ -846,6 +941,13 @@ def create_engine(name: str, max_steps: int = config.MAX_STEPS):
                 f"{config.OLLAMA_URL}. Start it with `ollama serve` and pull a model."
             )
         return OllamaEngine(max_steps=max_steps)
+    if name == "groq":
+        if not config.groq_available():
+            raise RuntimeError(
+                "The Groq engine needs GROQ_API_KEY set (get a free key at "
+                "https://console.groq.com) and the `requests` package installed."
+            )
+        return GroqEngine(max_steps=max_steps)
     if name == "claude":
         if not config.claude_available():
             raise RuntimeError(
