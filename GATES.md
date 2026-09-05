@@ -58,6 +58,20 @@ and the project genuinely submission-ready.
   EXPECT: NO-KEY FALLBACK VERIFICATION PASSED
   EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=b955b7f88c72d370c078ac77f35ff9a8117f539b696b2664db4301b4086e4508; output-bytes=126
 
-- [ ] G9: remaining submission work is stated plainly to the user rather than
+- [x] G9: remaining submission work is stated plainly to the user rather than
       implied complete (report chapters 4-6, video, repo URL)
-  EVIDENCE: pending
+  EVIDENCE: Audited the working code against the CM3020 final-submission brief
+    and reported to the user, in the reply accompanying this commit, that the
+    CODE is submission-ready (54 tests, 10 runnable gates met, all four engines
+    working, verified against live market data and a real served LLM) while
+    these deliverables are NOT done and are not implied to be: (1) report ch.4
+    Implementation, ch.5 Evaluation, ch.6 Conclusion — unwritten; ch.2/ch.3 need
+    revising from the preliminary report toward the 2500/2000-word limits;
+    (2) the 3-5 minute video with the user's own spoken narration — not made;
+    (3) `git push` — measured: both commits (0f40405, b13c9b9) exist only
+    locally on branch `fix/pre-submission-audit`; origin/main is behind, so the
+    public repo at github.com/kodekareem/Sage (HTTP 200, confirmed public) does
+    NOT yet contain this work; (4) evaluation depth — no rubric-scored question
+    set and no rule-vs-LLM agreement study, which the user was told is the main
+    gap for ch.5's five marking criteria. Report word limits and the video's
+    "no AI voices, not sped up" constraint were restated rather than assumed.
