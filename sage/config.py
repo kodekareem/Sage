@@ -35,6 +35,12 @@ GROQ_URL = os.environ.get("GROQ_URL", "https://api.groq.com/openai/v1")
 # demonstration of the loop.
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
 
+# Free-tier Groq keys cap *output* tokens per minute (1000 on the default
+# model). A request asking for more than the cap is refused outright, however
+# long you wait, so the per-call budget must sit under it. One ReAct turn is a
+# short thought plus a small JSON action, so this is comfortably enough.
+GROQ_MAX_TOKENS = int(os.environ.get("GROQ_MAX_TOKENS", "800"))
+
 ENGINES = ("rule", "ollama", "groq", "claude")
 
 

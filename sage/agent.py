@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from typing import Optional
 
 from . import config
@@ -635,6 +636,37 @@ def parse_react_output(text: str) -> dict:
     return out
 
 
+def _parse_duration(value) -> Optional[float]:
+    """Parse a Groq-style duration such as ``7m12s``, ``172ms`` or ``1.5s``.
+
+    Returns seconds, or ``None`` when the value is missing or unparseable.
+    Milliseconds are matched before the bare-seconds unit so ``172ms`` is not
+    read as 172 seconds.
+    """
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if not text:
+        return None
+
+    # A bare number is already seconds.
+    try:
+        return max(0.0, float(text))
+    except ValueError:
+        pass
+
+    units = (("ms", 0.001), ("h", 3600.0), ("m", 60.0), ("s", 1.0))
+    total = 0.0
+    matched = False
+    for amount, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(ms|h|m|s)", text):
+        for suffix, multiplier in units:
+            if unit == suffix:
+                total += float(amount) * multiplier
+                matched = True
+                break
+    return max(0.0, total) if matched else None
+
+
 def _loads_loose(text: str):
     """Parse the first JSON object/array in ``text`` (tolerant of surrounding prose).
 
@@ -684,14 +716,45 @@ Rules:
 """
 
 
+class RateLimitError(Exception):
+    """Raised by a backend when the provider refuses a call for rate limiting.
+
+    Kept distinct from a generic failure because the two need opposite
+    responses: a rate limit is temporary and worth retrying, while a bad key or
+    a missing model is permanent and retrying only wastes time. It also lets the
+    UI tell the user *which* problem they have — a free-tier token-per-minute
+    cap looks nothing like an invalid key, but a bare "LLM call failed" makes
+    them indistinguishable.
+    """
+
+    def __init__(self, message: str, retry_after: float | None = None):
+        super().__init__(message)
+        #: Seconds the provider asked us to wait, when it says so.
+        self.retry_after = retry_after
+
+
 class LLMEngine:
     """Base class implementing the ReAct loop for any chat-style LLM backend.
 
     Subclasses implement :meth:`complete`, which takes the running message list
-    and returns the model's text for the next turn.
+    and returns the model's text for the next turn. A subclass signals a
+    provider rate limit by raising :class:`RateLimitError`; the loop then backs
+    off and retries rather than abandoning the run.
     """
 
     name = "llm"
+
+    #: How many times to retry a single rate-limited turn before giving up.
+    max_retries = 3
+    #: Base seconds for exponential backoff (1s, 2s, 4s ...). Overridden in
+    #: tests so the suite does not actually sleep.
+    backoff_base = 1.0
+    #: Never wait longer than this for one retry, however long the provider asks.
+    backoff_cap = 30.0
+    #: Never retry faster than this. A provider can report a reset window of a
+    #: few milliseconds, and honouring that literally would hammer it with an
+    #: immediate retry that is certain to fail again.
+    backoff_floor = 0.5
 
     def __init__(self, max_steps: int = config.MAX_STEPS):
         self.max_steps = max_steps
@@ -699,6 +762,39 @@ class LLMEngine:
     # Subclasses override this.
     def complete(self, messages: list[dict]) -> str:  # pragma: no cover - overridden
         raise NotImplementedError
+
+    def _sleep(self, seconds: float) -> None:
+        """Wait between retries. Overridden in tests to avoid real delays."""
+        time.sleep(seconds)
+
+    def complete_with_retry(self, messages: list[dict]) -> str:
+        """Call :meth:`complete`, retrying with backoff while rate-limited.
+
+        Free-tier providers commonly cap tokens per minute, and a ReAct loop
+        resends the whole conversation each turn, so a long trace can trip that
+        cap part-way through. Losing the run at that point is a poor outcome
+        when the limit typically clears in seconds.
+
+        Honours a provider-supplied retry-after when present, otherwise backs
+        off exponentially. Any non-rate-limit failure propagates immediately.
+        """
+        last: RateLimitError | None = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                return self.complete(messages)
+            except RateLimitError as exc:
+                last = exc
+                if attempt == self.max_retries:
+                    break
+                wait = exc.retry_after
+                if wait is None:
+                    wait = self.backoff_base * (2 ** attempt)
+                # Clamp both ways: never longer than the cap, never so short
+                # that the retry is guaranteed to hit the same closed window.
+                self._sleep(max(self.backoff_floor, min(wait, self.backoff_cap)))
+
+        assert last is not None  # only reachable after a RateLimitError
+        raise last
 
     def run(self, question: str) -> ReActResult:
         result = ReActResult(question=question, engine=self.name)
@@ -710,7 +806,21 @@ class LLMEngine:
         consecutive_malformed = 0
         for i in range(1, self.max_steps + 1):
             try:
-                raw = self.complete([{"role": "system", "content": system}] + messages)
+                raw = self.complete_with_retry(
+                    [{"role": "system", "content": system}] + messages
+                )
+            except RateLimitError as exc:
+                # Say plainly that this is a throughput limit, not a bad key —
+                # the two are indistinguishable from a bare "LLM call failed",
+                # and only one of them is the user's fault.
+                result.error = (
+                    f"The {self.name} provider is rate-limiting this key: {exc} "
+                    f"(retried {self.max_retries}x with backoff). The key is "
+                    "valid — this is a throughput cap. Wait a minute and try "
+                    "again, use a smaller model, or switch to the `rule` engine, "
+                    "which needs no key at all."
+                )
+                return result
             except Exception as exc:  # network / API failure
                 result.error = f"LLM call failed: {exc}"
                 return result
@@ -793,8 +903,19 @@ class OllamaEngine(LLMEngine):
             json={"model": self.model, "messages": messages, "stream": False},
             timeout=120,
         )
+        # A local server can still refuse when it is loading a model or busy.
+        if resp.status_code == 429:
+            raise RateLimitError(
+                "the Ollama server is busy (HTTP 429)",
+                retry_after=self._retry_after_seconds(resp),
+            )
         resp.raise_for_status()
         return resp.json()["message"]["content"]
+
+    @staticmethod
+    def _retry_after_seconds(response) -> Optional[float]:
+        """Read a ``retry-after`` header, when the server sends one."""
+        return _parse_duration((getattr(response, "headers", {}) or {}).get("retry-after"))
 
 
 class GroqEngine(LLMEngine):
@@ -831,10 +952,24 @@ class GroqEngine(LLMEngine):
                 # Low temperature: we want the model to follow the ReAct format
                 # reliably, not to be creative about it.
                 "temperature": 0.2,
-                "max_tokens": 1024,
+                # Groq's free tier caps *output* tokens per minute (1000 on the
+                # default model). Asking for 1024 exceeds that on every single
+                # request, so the call is refused before it starts — no amount
+                # of retrying helps. A ReAct turn is one short Thought plus a
+                # small JSON action, so a much smaller budget is ample.
+                "max_tokens": config.GROQ_MAX_TOKENS,
             },
             timeout=120,
         )
+
+        # A free-tier key is capped on tokens per minute, and a ReAct loop
+        # resends the whole conversation each turn, so a long trace can trip the
+        # cap mid-run. Signal it distinctly so the loop can back off and retry.
+        if response.status_code == 429:
+            raise RateLimitError(
+                self._rate_limit_message(response),
+                retry_after=self._retry_after_seconds(response),
+            )
 
         # Sage parses tool calls out of the model's *text*, so no `tools` array
         # is declared. A model that reaches for its native function-calling
@@ -852,6 +987,35 @@ class GroqEngine(LLMEngine):
             return payload["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError) as exc:
             raise RuntimeError(f"Unexpected Groq response shape: {payload}") from exc
+
+    @staticmethod
+    def _retry_after_seconds(response) -> Optional[float]:
+        """Read how long the provider wants us to wait, if it says.
+
+        Groq sends ``retry-after`` in seconds, and also exposes reset windows
+        like ``7m12s`` / ``172ms`` on its rate-limit headers.
+        """
+        headers = getattr(response, "headers", {}) or {}
+
+        raw = headers.get("retry-after")
+        if raw is not None:
+            try:
+                return max(0.0, float(raw))
+            except (TypeError, ValueError):
+                pass
+
+        # Fall back to the token-window reset, which is the limit a ReAct loop
+        # actually hits (requests-per-day is rarely the binding constraint).
+        return _parse_duration(headers.get("x-ratelimit-reset-tokens"))
+
+    @staticmethod
+    def _rate_limit_message(response) -> str:
+        """Build a message that says which limit was hit, when known."""
+        try:
+            detail = (response.json().get("error") or {}).get("message")
+        except (ValueError, AttributeError):
+            detail = None
+        return detail or "rate limit exceeded (HTTP 429)"
 
     @staticmethod
     def _recover_native_tool_call(response) -> Optional[str]:
@@ -911,12 +1075,25 @@ class ClaudeEngine(LLMEngine):
                 system = m["content"]
             else:
                 chat.append({"role": m["role"], "content": m["content"]})
-        response = self._client.messages.create(
-            model=self.model,
-            max_tokens=1024,
-            system=system,
-            messages=chat,
-        )
+        try:
+            response = self._client.messages.create(
+                model=self.model,
+                max_tokens=1024,
+                system=system,
+                messages=chat,
+            )
+        except Exception as exc:
+            # The Anthropic SDK raises a typed RateLimitError. Translate it into
+            # Sage's own so the shared loop can back off, without importing the
+            # SDK's exception type at module level (it is an optional dependency).
+            if type(exc).__name__ == "RateLimitError" or getattr(
+                getattr(exc, "response", None), "status_code", None
+            ) == 429:
+                retry_after = None
+                headers = getattr(getattr(exc, "response", None), "headers", None) or {}
+                retry_after = _parse_duration(headers.get("retry-after"))
+                raise RateLimitError(str(exc) or "rate limited", retry_after) from exc
+            raise
         # Concatenate the text blocks of the reply.
         return "".join(block.text for block in response.content if block.type == "text")
 

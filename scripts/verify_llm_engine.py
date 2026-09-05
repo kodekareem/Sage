@@ -41,6 +41,18 @@ def fail(message: str) -> None:
     sys.exit(1)
 
 
+def is_rate_limit(error: str) -> bool:
+    """True when an error string describes a provider throughput cap.
+
+    Deliberately narrow: an authentication failure must NOT match, or the
+    script would tell someone with a dead key to simply wait.
+    """
+    text = (error or "").lower()
+    if any(w in text for w in ("invalid api key", "unauthorized", "authentication", "401")):
+        return False
+    return "rate-limiting" in text or "rate limit" in text or "429" in text
+
+
 def pick_engine(requested: str | None):
     """Return a live engine instance, or exit if none is reachable."""
     if requested in (None, "groq") and config.groq_available():
@@ -82,6 +94,20 @@ def main() -> None:
         print(f"    thought: {(step.thought or '')[:100]}")
 
     if result.error:
+        # A throughput cap is not a broken key or a broken loop, and reporting
+        # it as a flat failure sends the reader hunting for the wrong problem.
+        if is_rate_limit(result.error):
+            print(
+                "\nRATE LIMITED — this is NOT a bad key and NOT a code fault.\n"
+                f"  {result.error}\n"
+                "  The loop already retried with backoff and the cap was still\n"
+                "  in force. Free tiers cap tokens per minute, and each ReAct\n"
+                "  step resends the whole conversation, so a long trace can\n"
+                "  exhaust the window. Wait ~60s and re-run, pick a smaller\n"
+                "  model via GROQ_MODEL, or demo the `rule` engine, which needs\n"
+                "  no key at all."
+            )
+            sys.exit(2)  # distinct from 1, so callers can tell the cases apart
         fail(f"the live LLM run errored: {result.error}")
 
     if not result.steps:

@@ -31,7 +31,7 @@ and the project genuinely submission-ready.
 - [x] G4: the ReAct loop drives a real served LLM through real tool calls to a verdict
   CHECK: python scripts/verify_llm_engine.py --engine groq
   EXPECT: LLM ENGINE VERIFICATION PASSED
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=5f10009feb9687f2d84dca5ca38b58c158778f65c16b1b213e034aea992d9692; output-bytes=853
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=9043b6580ec6fe61f5acd8783ecaae239c24c7e5141b65a895a6aa5e9308c34b; output-bytes=855
 
 - [x] G4b: the LLM engine's real HTTP/socket path is proven, independent of any model
   CHECK: python -m pytest tests/test_llm_http.py -q
@@ -41,7 +41,7 @@ and the project genuinely submission-ready.
 - [x] G5: the full test suite passes with no regressions and covers the new behaviour
   CHECK: python -m pytest -q
   EXPECT: /^\d+ passed/m
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=73f67f366d3f6b20fde1b3f9e64c02bf3ee7e3a81805122e3896f06b215ddae8; output-bytes=101
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=9d49837993fa92f509a4c308041213b5ae6aad872d482488a795930b35b83cb1; output-bytes=182
 
 - [x] G6: the live rule engine still produces a grounded end-to-end trace
   CHECK: python scripts/verify_live.py
@@ -51,7 +51,7 @@ and the project genuinely submission-ready.
 - [x] G7: no API key or other secret is committed anywhere in the repository
   CHECK: python scripts/verify_no_secrets.py
   EXPECT: SECRET SCAN PASSED
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=262a27276d2fdb8f25d0140a1f343efa90b59a3f8181f86ff36543ad1ddeb488; output-bytes=113
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=12b26d4e5e6c5674c16b3d995497d0329c1cd97981fd6dbe634520a7af978993; output-bytes=113
 
 - [x] G8: the app still works with no keys at all, as the deployed demo will
   CHECK: python scripts/verify_no_key_fallback.py
@@ -68,10 +68,23 @@ and the project genuinely submission-ready.
     Implementation, ch.5 Evaluation, ch.6 Conclusion — unwritten; ch.2/ch.3 need
     revising from the preliminary report toward the 2500/2000-word limits;
     (2) the 3-5 minute video with the user's own spoken narration — not made;
-    (3) `git push` — measured: both commits (0f40405, b13c9b9) exist only
-    locally on branch `fix/pre-submission-audit`; origin/main is behind, so the
-    public repo at github.com/kodekareem/Sage (HTTP 200, confirmed public) does
-    NOT yet contain this work; (4) evaluation depth — no rubric-scored question
+    (3) `git push` — SINCE RESOLVED: at the time of this gate both commits were
+    local only; main was later fast-forwarded and pushed, and the public repo
+    at github.com/kodekareem/Sage was verified to serve them (remote HEAD
+    8981c63, private=false, raw files 200, no key in any published file or in
+    history); (4) evaluation depth — no rubric-scored question
     set and no rule-vs-LLM agreement study, which the user was told is the main
     gap for ch.5's five marking criteria. Report word limits and the video's
     "no AI voices, not sped up" constraint were restated rather than assumed.
+
+- [x] G10: a rate-limited (429) LLM call is retried with backoff and succeeds,
+      rather than failing the run on the first refusal
+  CHECK: python -m pytest tests/test_rate_limit.py -q
+  EXPECT: /^\d+ passed/m
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=7c9e9deedbb6c400d1040b5fce3bb59f0f65aeaa9d41c9fe15c0f5c2fe13b7fe; output-bytes=101
+
+- [x] G11: the verify script names a rate limit as a rate limit, and never
+      reports it as a bad key (and still reports a bad key as a bad key)
+  CHECK: python scripts/verify_rate_limit_reporting.py
+  EXPECT: RATE LIMIT REPORTING VERIFICATION PASSED
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=089fd99dd84a065ef81fe3ad94c3f193f438538053d2044c1f32d1f93c174935; output-bytes=276

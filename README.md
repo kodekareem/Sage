@@ -82,12 +82,26 @@ special-case an engine.
 |---|---|---|
 | **`rule`** (default) | Deterministic, free, no-key. Scripts sensible thoughts, calls the **real** tools in a sensible order against **real** data, records every observation, and derives a transparent buy/sell/hold (or comparison) verdict via bull/bear point scoring. Ties are reported as ties rather than broken arbitrarily. It genuinely walks the loop — it never shortcuts. This is what the deployed demo uses. | Nothing (only `yfinance` network) |
 | **`ollama`** | A real **local** LLM via [Ollama](https://ollama.com) (e.g. `llama3.2`), prompted to emit Thought/Action/Action-Input that Sage parses and executes. For genuine LLM reasoning at no cost on a local machine. | Ollama running at `localhost:11434` |
-| **`groq`** | A real **hosted** open-weight model (default `qwen/qwen3.8-27b`) through Groq's OpenAI-compatible API. Free tier, no GPU needed — the easiest way to see the loop driven by a genuine LLM. | `GROQ_API_KEY` ([free](https://console.groq.com)) |
+| **`groq`** | A real **hosted** open-weight model (default `qwen/qwen3.8-27b`) through Groq's OpenAI-compatible API. Free tier, no GPU needed — the easiest way to see the loop driven by a genuine LLM. Rate limits are retried with backoff. | `GROQ_API_KEY` ([free](https://console.groq.com)) |
 | **`claude`** | The same hand-rolled loop backed by the Anthropic API. | `ANTHROPIC_API_KEY` |
 
 The LLM loop is **hand-rolled** (no LangChain) — that's deliberate and keeps the
 reasoning loop legible. It is capped at `MAX_STEPS` to prevent runaway cost and
 infinite loops, and it handles malformed model output gracefully.
+
+**Rate limits.** Free-tier providers cap throughput, and a ReAct loop resends the
+whole conversation each turn, so a long trace can trip a cap part-way through.
+A refused call (HTTP 429) is retried with exponential backoff — honouring the
+provider's own `retry-after` when it sends one, with a floor so a near-zero
+reset window can't cause a retry storm, and a cap so an absurd one can't stall
+the run. If the limit still holds after retrying, Sage says so explicitly:
+a throughput cap is reported as a throughput cap, never as a bad key, because
+those need opposite responses from the user.
+
+> Groq's free tier also caps *output* tokens per minute (1000 on the default
+> model), so `GROQ_MAX_TOKENS` defaults to 800. Asking for more than the cap is
+> refused on every request no matter how long you wait — a limit no retry can
+> solve, and one worth knowing before a live demo.
 
 > **Engine selection:** if a requested LLM engine isn't available (no Ollama, no
 > key), Sage automatically falls back to `rule`, so it always works out of the
@@ -168,6 +182,11 @@ synthetic prices, so no test touches the network. It covers:
 - **LLM parser** — correctly parses Thought / Action / Action-Input and Final
   Answer (including JSON in code fences and free-text finals), and reports
   malformed output instead of crashing.
+- **Rate limiting** (`tests/test_rate_limit.py`) — a 429 is retried with
+  exponential backoff and the run recovers; the provider's `retry-after` is
+  honoured within a floor and a cap; a persistent limit is reported as a
+  throughput cap rather than a bad key; and a genuine auth failure is *not*
+  retried, since waiting would never fix it.
 - **ReAct engine** — the rule engine produces a valid step-by-step trace and a
   sensible verdict; comparison verdicts are order-independent and declare ties
   honestly; position sizing handles labelled inputs and impossible trades; the
@@ -190,6 +209,7 @@ Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
 | `verify_llm_engine.py` | The ReAct loop against a **real** served model — `--engine groq` (or `ollama`/`claude`); fails loudly rather than skipping when no backend is reachable |
 | `verify_no_secrets.py` | No API key or credential is committed to the repo |
 | `verify_no_key_fallback.py` | The app still works with every key stripped, as the deployed demo does |
+| `verify_rate_limit_reporting.py` | A rate limit is reported as a rate limit and a bad key as a bad key (both directions checked) |
 
 ---
 
