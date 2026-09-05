@@ -1,0 +1,28 @@
+Evaluation over 15 questions (offline fixtures)
+
+rule engine:
+  ok  S1: 4 steps -> HOLD
+  ok  S2: 4 steps -> BUY
+  ok  S3: 4 steps -> SELL
+  ok  S4: 4 steps -> BUY
+  ok  S5: 4 steps -> HOLD
+  ok  S6: 4 steps -> BUY
+  ok  C1: 2 steps -> TOO CLOSE TO CALL: AAPL and MSFT
+  ok  C2: 2 steps -> PREFER AAPL
+  ok  C3: 2 steps -> PREFER AMD
+  ok  C4: 2 steps -> PREFER MSFT
+  ok  P1: 1 steps -> 20 shares
+  ok  P2: 1 steps -> 10 shares
+  ok  R1: 0 steps -> I couldn't identify a stock ticker in your question. Try naming a company (e.g. 'NVIDIA') or a symbol (e.g. 'NVDA').
+  ok  R2: 0 steps -> I couldn't identify a stock ticker in your question. Try naming a company (e.g. 'NVIDIA') or a symbol (e.g. 'NVDA').
+  ok  R3: 4 steps -> No data for 'ZZZQQ'.
+
+groq engine:
+  ok  S1: 4 steps -> HOLD
+  ok  S2: 4 steps -> HOLD
+  BAD S3: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on output tokens per minute (OTPM): Limit 1000, Used 762, Requested 635. Please try again in 23.82s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
+  BAD S4: 3 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on output tokens per minute (OTPM): Limit 1000, Used 987, Requested 617. Please try again in 36.24s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
+  BAD S5: 2 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198865, Requested 1414. Please try again in 2m0.527999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
+  BAD S6: 1 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199217, Requested 1338. Please try again in 3m59.76s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
+  BAD C1: 1 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199436, Requested 1422. Please try again in 6m10.656s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
+  BAD C2: 0 steps -> The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199222, Requested 1276. Please try again in 3m35.136s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid — this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all.
