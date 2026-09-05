@@ -479,6 +479,25 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     suffix = "offline" if offline else "live"
     path = out_dir / f"evaluation-{suffix}.json"
+
+    # A rule-only run must not destroy a previously measured comparison. The LLM
+    # half costs real API quota, so re-running the free half to refresh it would
+    # otherwise silently throw the expensive half away.
+    if path.exists() and not llm_rows:
+        try:
+            previous = json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            previous = {}
+        for key in ("llm", "llm_rows", "agreement", "llm_engine",
+                    "llm_provider", "llm_model"):
+            if key in previous:
+                report[key] = previous[key]
+        if "llm" in report:
+            report["llm_note"] = (
+                "The language model results were measured in an earlier run and "
+                "carried forward; this run re-measured the rule engine only."
+            )
+
     path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     s = report["rule"]

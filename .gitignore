@@ -24,3 +24,6 @@ sage-streamlit-demo.png
 .unlazy/
 .unlazy-hook-state.json
 .claude/settings.local.json
+
+# LaTeX build artefacts
+report/build/

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-05 18:24 UTC",
+  "generated": "2026-09-05 19:02 UTC",
   "mode": "offline",
   "question_count": 15,
   "rule": {
@@ -841,7 +841,6 @@
       "error": "No data for 'ZZZQQ'."
     }
   ],
-  "llm_engine": "groq",
   "llm": {
     "questions": 15,
     "answerable": 12,
@@ -1707,5 +1706,9 @@
         "llm": "PREFER:10 SHARES OF MSFT"
       }
     ]
-  }
+  },
+  "llm_engine": "groq (OpenAI-compatible engine)",
+  "llm_provider": "OpenRouter",
+  "llm_model": "minimax/minimax-m3:free",
+  "llm_note": "The language model results were measured in an earlier run and carried forward; this run re-measured the rule engine only."
 }
