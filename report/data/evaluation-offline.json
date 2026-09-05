@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-05 17:23 UTC",
+  "generated": "2026-09-05 17:33 UTC",
   "mode": "offline",
   "question_count": 15,
   "rule": {
@@ -8,9 +8,9 @@
     "refusal_cases": 3,
     "trace_valid": 15,
     "trace_valid_pct": 100.0,
-    "grounded": 12,
+    "grounded": 8,
     "grounded_of": 12,
-    "grounded_pct": 100.0,
+    "grounded_pct": 66.7,
     "tools_appropriate": 12,
     "tools_appropriate_pct": 100.0,
     "answered_correctly": 15,
@@ -173,8 +173,11 @@
       ],
       "trace_valid": true,
       "trace_problems": [],
-      "grounded": true,
-      "ungrounded_figures": [],
+      "grounded": false,
+      "ungrounded_figures": [
+        "89.0",
+        "93.0"
+      ],
       "tools_appropriate": true,
       "missing_tools": [],
       "answered_correctly": true,
@@ -194,8 +197,11 @@
       ],
       "trace_valid": true,
       "trace_problems": [],
-      "grounded": true,
-      "ungrounded_figures": [],
+      "grounded": false,
+      "ungrounded_figures": [
+        "83.0",
+        "93.0"
+      ],
       "tools_appropriate": true,
       "missing_tools": [],
       "answered_correctly": true,
@@ -215,8 +221,10 @@
       ],
       "trace_valid": true,
       "trace_problems": [],
-      "grounded": true,
-      "ungrounded_figures": [],
+      "grounded": false,
+      "ungrounded_figures": [
+        "78.0"
+      ],
       "tools_appropriate": true,
       "missing_tools": [],
       "answered_correctly": true,
@@ -236,8 +244,11 @@
       ],
       "trace_valid": true,
       "trace_problems": [],
-      "grounded": true,
-      "ungrounded_figures": [],
+      "grounded": false,
+      "ungrounded_figures": [
+        "83.0",
+        "89.0"
+      ],
       "tools_appropriate": true,
       "missing_tools": [],
       "answered_correctly": true,
@@ -350,5 +361,356 @@
       "rationale": null,
       "error": "No data for 'ZZZQQ'."
     }
-  ]
+  ],
+  "llm_engine": "groq",
+  "llm": {
+    "questions": 15,
+    "answerable": 12,
+    "refusal_cases": 3,
+    "trace_valid": 15,
+    "trace_valid_pct": 100.0,
+    "grounded": 1,
+    "grounded_of": 2,
+    "grounded_pct": 50.0,
+    "tools_appropriate": 6,
+    "tools_appropriate_pct": 50.0,
+    "answered_correctly": 4,
+    "answered_correctly_pct": 26.7,
+    "mean_steps": 2.29
+  },
+  "llm_rows": [
+    {
+      "id": "S1",
+      "question": "Should I buy NVDA right now?",
+      "kind": "single",
+      "engine": "groq",
+      "steps": 4,
+      "tools_called": [
+        "get_quote",
+        "calculate_technical_indicators",
+        "get_fundamentals"
+      ],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": false,
+      "ungrounded_figures": [
+        "52.0"
+      ],
+      "tools_appropriate": true,
+      "missing_tools": [],
+      "answered_correctly": true,
+      "verdict": "HOLD",
+      "confidence": "high",
+      "rationale": "NVDA is in a strong long-term uptrend (Golden Cross, price above SMA200) with solid fundamentals (Forward P/E 35). However, the RSI is 97.78, indicating the stock is extremely overbought, and the price is near its 52-week high ($230). Entering a position at this level carries a high risk of a short-term pullback. It is advisable to wait for a dip or for the RSI to normalize before buying.",
+      "error": null
+    },
+    {
+      "id": "S2",
+      "question": "Is AAPL a good buy today?",
+      "kind": "single",
+      "engine": "groq",
+      "steps": 4,
+      "tools_called": [
+        "get_quote",
+        "calculate_technical_indicators",
+        "get_fundamentals"
+      ],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": true,
+      "ungrounded_figures": [],
+      "tools_appropriate": true,
+      "missing_tools": [],
+      "answered_correctly": true,
+      "verdict": "HOLD",
+      "confidence": "high",
+      "rationale": "AAPL is in a strong long-term uptrend (Golden Cross) but is currently extremely overbought with an RSI of 93.93. The price is also significantly extended above its 50-day moving average ($202.82 vs $190.53). Entering a new position at these levels carries high short-term risk of a pullback. It is advisable to wait for a dip or for the RSI to normalize before buying.",
+      "error": null
+    },
+    {
+      "id": "S3",
+      "question": "Should I sell my TSLA shares?",
+      "kind": "single",
+      "engine": "groq",
+      "steps": 0,
+      "tools_called": [],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": false,
+      "missing_tools": [
+        "get_quote"
+      ],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on output tokens per minute (OTPM): Limit 1000, Used 762, Requested 635. Please try again in 23.82s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "S4",
+      "question": "What do you think about MSFT as an investment?",
+      "kind": "single",
+      "engine": "groq",
+      "steps": 3,
+      "tools_called": [
+        "get_quote",
+        "get_fundamentals",
+        "calculate_technical_indicators"
+      ],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": true,
+      "missing_tools": [],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on output tokens per minute (OTPM): Limit 1000, Used 987, Requested 617. Please try again in 36.24s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "S5",
+      "question": "Should I buy NVIDIA right now?",
+      "kind": "single",
+      "engine": "groq",
+      "steps": 2,
+      "tools_called": [
+        "get_quote",
+        "calculate_technical_indicators"
+      ],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": true,
+      "missing_tools": [],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198865, Requested 1414. Please try again in 2m0.527999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "S6",
+      "question": "Is Apple overvalued at the moment?",
+      "kind": "single",
+      "engine": "groq",
+      "steps": 1,
+      "tools_called": [
+        "get_fundamentals"
+      ],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": false,
+      "missing_tools": [
+        "get_quote"
+      ],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199217, Requested 1338. Please try again in 3m59.76s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "C1",
+      "question": "Compare AAPL and MSFT for a long-term hold",
+      "kind": "compare",
+      "engine": "groq",
+      "steps": 1,
+      "tools_called": [
+        "compare_tickers"
+      ],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": true,
+      "missing_tools": [],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199436, Requested 1422. Please try again in 6m10.656s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "C2",
+      "question": "AAPL vs TSLA, which is the better buy?",
+      "kind": "compare",
+      "engine": "groq",
+      "steps": 0,
+      "tools_called": [],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": false,
+      "missing_tools": [
+        "compare_tickers"
+      ],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199222, Requested 1276. Please try again in 3m35.136s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "C3",
+      "question": "Which is stronger right now, NVDA or AMD?",
+      "kind": "compare",
+      "engine": "groq",
+      "steps": 0,
+      "tools_called": [],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": false,
+      "missing_tools": [
+        "compare_tickers"
+      ],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199554, Requested 1136. Please try again in 4m58.08s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "C4",
+      "question": "Compare Microsoft and Tesla as investments",
+      "kind": "compare",
+      "engine": "groq",
+      "steps": 0,
+      "tools_called": [],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": false,
+      "missing_tools": [
+        "compare_tickers"
+      ],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199341, Requested 918. Please try again in 1m51.887999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "P1",
+      "question": "I have a $10000 account, risk 2% buying AAPL at 150 with a stop at 140. How many shares should I take?",
+      "kind": "size",
+      "engine": "groq",
+      "steps": 0,
+      "tools_called": [],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": false,
+      "missing_tools": [
+        "estimate_position_size"
+      ],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199128, Requested 966. Please try again in 40.608s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "P2",
+      "question": "With $5000 and 1% risk on MSFT at 100, stop at 95, how many shares?",
+      "kind": "size",
+      "engine": "groq",
+      "steps": 1,
+      "tools_called": [
+        "estimate_position_size"
+      ],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": true,
+      "missing_tools": [],
+      "answered_correctly": false,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199344, Requested 763. Please try again in 46.224s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "R1",
+      "question": "What is a good investment strategy?",
+      "kind": "refuse",
+      "engine": "groq",
+      "steps": 1,
+      "tools_called": [],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": true,
+      "ungrounded_figures": [],
+      "tools_appropriate": true,
+      "missing_tools": [],
+      "answered_correctly": false,
+      "verdict": "HOLD",
+      "confidence": "high",
+      "rationale": "A good general investment strategy involves diversification across asset classes (stocks, bonds, cash), maintaining a long-term horizon, regularly rebalancing your portfolio, and keeping costs low through index funds or ETFs. It is important to align investments with your risk tolerance and financial goals, and to avoid trying to time the market.",
+      "error": null
+    },
+    {
+      "id": "R2",
+      "question": "Is the market going up tomorrow?",
+      "kind": "refuse",
+      "engine": "groq",
+      "steps": 0,
+      "tools_called": [],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": true,
+      "missing_tools": [],
+      "answered_correctly": true,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199748, Requested 618. Please try again in 2m38.112s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    },
+    {
+      "id": "R3",
+      "question": "Should I buy ZZZQQ right now?",
+      "kind": "refuse_or_error",
+      "engine": "groq",
+      "steps": 0,
+      "tools_called": [],
+      "trace_valid": true,
+      "trace_problems": [],
+      "grounded": null,
+      "ungrounded_figures": [],
+      "tools_appropriate": true,
+      "missing_tools": [],
+      "answered_correctly": true,
+      "verdict": null,
+      "confidence": null,
+      "rationale": null,
+      "error": "The groq provider is rate-limiting this key: Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01kxm9q11tenr8c61s9rkjhq9q` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199535, Requested 620. Please try again in 1m6.959999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing (retried 3x with backoff). The key is valid \u2014 this is a throughput cap. Wait a minute and try again, use a smaller model, or switch to the `rule` engine, which needs no key at all."
+    }
+  ],
+  "agreement": {
+    "compared": 2,
+    "agreed": 1,
+    "agreement_pct": 50.0,
+    "disagreements": [
+      {
+        "id": "S2",
+        "question": "Is AAPL a good buy today?",
+        "rule": "BUY",
+        "llm": "HOLD"
+      }
+    ]
+  }
 }
