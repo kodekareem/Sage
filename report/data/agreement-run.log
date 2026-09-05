@@ -19,27 +19,28 @@ rule engine:
 
 groq engine:
   ok  S1: 4 steps -> HOLD
-  BAD S2: 2 steps -> LLM call failed: 400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions
-  BAD S3: 4 steps -> LLM call failed: 400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions
-  ok  S4: 3 steps -> HOLD
+  ok  S2: 4 steps -> HOLD
+  ok  S3: 4 steps -> SELL
+  ok  S4: 5 steps -> HOLD
   ok  S5: 4 steps -> HOLD
-  ok  S6: 3 steps -> HOLD
-  ok  C1: 5 steps -> HOLD for both, slight preference for MSFT
-  ok  C2: 2 steps -> BUY AAPL
-  ok  C3: 2 steps -> NVDA is stronger right now
-  ok  C4: 2 steps -> Microsoft is the preferable investment; Tesla is riskier and may be held or sold depending on risk tolerance
-  ok  P1: 2 steps -> BUY
-  ok  P2: 2 steps -> BUY
-Traceback (most recent call last):
-  File "C:\Users\pc\sage-project\scripts\run_evaluation.py", line 473, in <module>
-    main()
-    ~~~~^^
-  File "C:\Users\pc\sage-project\scripts\run_evaluation.py", line 435, in main
-    llm_rows = run_engine(args.engine, args.max_steps)
-  File "C:\Users\pc\sage-project\scripts\run_evaluation.py", line 400, in run_engine
-    print(f"  {flag} {row['id']}: {row['steps']} steps -> {row['verdict'] or row['error']}")
-    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Python313\Lib\encodings\cp1252.py", line 19, in encode
-    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
-           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-UnicodeEncodeError: 'charmap' codec can't encode character '\u2011' in position 46: character maps to <undefined>
+  ok  S6: 2 steps -> HOLD
+  ok  C1: 2 steps -> MSFT over AAPL
+  ok  C2: 2 steps -> AAPL is the better buy
+  ok  C3: 2 steps -> NVDA is currently the stronger momentum/trend story (golden cross, much larger market cap, near-term price strength), but it is extremely overbought (RSI ~98), which makes a short-term pullback risk elevated. AMD is the weaker trend right now (death cross, slight daily decline) but is technically healthier (RSI ~66) and far cheaper on P/E (22 vs 45). Verdict: NVDA is stronger on momentum and trend; AMD is the steadier/cheaper alternative.
+  ok  C4: 4 steps -> MSFT is the stronger core investment; TSLA is a higher-risk tactical play. For most investors, MSFT wins on quality, while TSLA's oversold RSI and proximity to 52-week lows make it a speculative rebound candidate rather than a stable holding.
+  ok  P1: 2 steps -> BUY 20 shares of AAPL
+  ok  P2: 2 steps -> BUY 10 shares of MSFT
+  BAD R1: 1 steps -> HOLD
+  BAD R2: 5 steps -> HOLD
+  BAD R3: 2 steps -> HOLD
+
+--- rule engine over 15 questions ---
+  trace validity      15/15  (100.0%)
+  groundedness        12/12  (100.0%)
+  tool appropriateness 12/12  (100.0%)
+  behaved as required 15/15  (100.0%)
+  mean steps          2.83
+  engine agreement    3/12 (25.0%)
+
+written to report\data\evaluation-offline.json
+EVALUATION COMPLETE

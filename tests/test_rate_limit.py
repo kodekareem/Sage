@@ -321,3 +321,38 @@ def test_backoff_has_a_floor():
     engine.complete_with_retry([{"role": "user", "content": "hi"}])
     assert engine.slept == [engine.backoff_floor]
     assert engine.backoff_floor >= 0.25
+
+
+# --------------------------------------------------------------------------- #
+# Aggregators that answer 200 with an error body
+# --------------------------------------------------------------------------- #
+def test_error_body_on_a_200_is_treated_as_a_rate_limit(groq, monkeypatch):
+    """OpenRouter returns HTTP 200 carrying an upstream refusal.
+
+    A shared free model being briefly unavailable is a throughput problem, so
+    the loop should back off and retry rather than lose the run.
+    """
+    body = {"id": "gen-1", "error": {"code": 429,
+                                     "message": "model is temporarily rate-limited upstream"}}
+    monkeypatch.setattr("requests.post", lambda *a, **k: FakeResponse(200, body))
+
+    with pytest.raises(RateLimitError):
+        groq.complete([{"role": "user", "content": "hi"}])
+
+
+def test_non_rate_limit_error_body_raises_a_clear_error(groq, monkeypatch):
+    """A genuine provider fault is reported, not disguised as a rate limit."""
+    body = {"id": "gen-2", "error": {"code": 400, "message": "no endpoints found"}}
+    monkeypatch.setattr("requests.post", lambda *a, **k: FakeResponse(200, body))
+
+    with pytest.raises(RuntimeError) as excinfo:
+        groq.complete([{"role": "user", "content": "hi"}])
+    assert "no endpoints found" in str(excinfo.value)
+    assert not isinstance(excinfo.value, RateLimitError)
+
+
+def test_a_normal_200_still_returns_content(groq, monkeypatch):
+    """The error check must not disturb a healthy response."""
+    body = {"choices": [{"message": {"content": "Thought: fine"}}]}
+    monkeypatch.setattr("requests.post", lambda *a, **k: FakeResponse(200, body))
+    assert groq.complete([{"role": "user", "content": "hi"}]) == "Thought: fine"

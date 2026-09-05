@@ -213,6 +213,8 @@ _DOMAIN_VOCABULARY = re.compile(
     | \brsi\s*\(\s*\d{1,3}(?!\.?\d)\s*\)            # RSI(14)
     | \b(?:above|below|under|over)\s+(?:30|70)(?!\.?\d)\b   # RSI thresholds
     | \b(?:30|70)(?!\.?\d)\s+(?:threshold|level|line)\b
+    | \b52[-\s]?week\b                             # "52-week high" is a term
+    | \bsma\s*\d{1,3}\s*/\s*\d{1,3}(?!\.?\d)\b     # "SMA50/200" names both
     """,
     re.IGNORECASE | re.VERBOSE,
 )
@@ -258,10 +260,21 @@ def score_run(item: dict, result) -> dict:
         # rationale writes "down 48.59%", carrying the sign in the word rather
         # than the digits. That is correct prose, not an invented figure, so
         # matching on the signed value would score good output as fabricated.
-        observed_mag = {round(abs(v), 4) for v in observed}
-        ungrounded = sorted(
-            str(v) for v in cited if round(abs(v), 4) not in observed_mag
-        )
+        # A cited figure counts as grounded when it matches an observed value
+        # closely enough to be that value rather than a different one. Models
+        # round when they write prose ("RSI of 93.9" for an observed 93.93,
+        # "~$207" for 206.74), and treating a faithful rounding as a fabricated
+        # number would measure writing style instead of honesty. The tolerance
+        # is deliberately tight — 1% or half a unit — so a genuinely invented
+        # figure still fails.
+        observed_mag = sorted({abs(v) for v in observed})
+
+        def traces_to_an_observation(value: float) -> bool:
+            target = abs(value)
+            tolerance = max(0.5, target * 0.01)
+            return any(abs(target - o) <= tolerance for o in observed_mag)
+
+        ungrounded = sorted(str(v) for v in cited if not traces_to_an_observation(v))
         grounded = not ungrounded
 
     # --- Tool appropriateness --------------------------------------------
@@ -296,6 +309,10 @@ def score_run(item: dict, result) -> dict:
         # taken on the scorer's word. Any groundedness number quoted in the
         # report has to be checkable against the text that produced it.
         "rationale": result.final.rationale if result.final else None,
+        # Stored so groundedness can be re-scored later without paying for
+        # another set of model calls. Re-running a study to fix a scorer bug
+        # costs real quota; keeping the evidence makes it a local operation.
+        "observations": [s.observation for s in result.steps],
         "error": result.error,
     }
 

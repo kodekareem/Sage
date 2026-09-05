@@ -149,6 +149,39 @@ def main() -> None:
             )
     print(f"kept {len(partial_cases)}/{len(partial_cases)} decimals intact through stripping")
 
+    # --- 4c. Rounding is faithful; a different number is not. -------------
+    # Models round in prose ("RSI of 93.9" for 93.93). That is the same reading,
+    # so it must pass. The tolerance must stay tight enough that a nearby but
+    # genuinely different figure still fails, or groundedness would measure
+    # nothing.
+    rounded_ok = [
+        "The RSI is 97.8.",          # observed 97.78
+        "The 50-day sits near 207.", # observed 206.74
+        "Its P/E is about 45.",      # observed 45.0
+    ]
+    for text in rounded_ok:
+        if not grounded(text):
+            fail(f"a faithfully rounded figure was scored as fabricated: {text!r}")
+    print(f"accepted {len(rounded_ok)}/{len(rounded_ok)} rounded-but-faithful figures")
+
+    nearby_but_wrong = [
+        "The RSI is 88.0.",           # nothing observed is near 88
+        "The 50-day sits at 250.00.", # not 206.74
+        "Its P/E is 52.",             # not 45.0
+    ]
+    for text in nearby_but_wrong:
+        if grounded(text):
+            fail(
+                "the rounding tolerance is too loose — a figure matching no "
+                f"observation was accepted: {text!r}"
+            )
+    print(f"still rejected {len(nearby_but_wrong)}/{len(nearby_but_wrong)} near-miss fabrications")
+
+    # --- 4d. "52-week" is a term, not a reading. --------------------------
+    if not grounded("The stock trades near its 52-week high."):
+        fail("the standard term '52-week high' was mistaken for a data reading")
+    print("treated '52-week' as the standard term it is")
+
     # --- 5. A rationale mixing vocabulary and a fabrication still fails. ---
     mixed = "Price is above its 200-day average and the RSI of 55.55 is neutral."
     if grounded(mixed):

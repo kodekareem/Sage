@@ -986,6 +986,19 @@ class GroqEngine(LLMEngine):
 
         response.raise_for_status()
         payload = response.json()
+
+        # Aggregators (OpenRouter and similar) answer 200 with an error object
+        # in the body when the upstream provider refuses. A shared free model
+        # being briefly unavailable is a throughput problem, so surface it as
+        # one and let the loop back off rather than abandoning the run.
+        error = payload.get("error") if isinstance(payload, dict) else None
+        if error:
+            message = str(error.get("message", error))
+            code = error.get("code")
+            if code in (429, "429") or "rate" in message.lower() or "temporarily" in message.lower():
+                raise RateLimitError(message)
+            raise RuntimeError(f"Provider error: {message}")
+
         try:
             return payload["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError) as exc:
