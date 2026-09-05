@@ -107,7 +107,9 @@ if run and question.strip():
     # ----- Final recommendation, shown prominently up top. -----
     if result.final:
         f = result.final
-        colour = {"BUY": "🟢", "SELL": "🔴", "HOLD": "🟡"}.get(
+        # "PREFER X" and "TOO CLOSE TO CALL: ..." both fall through to the
+        # neutral marker, which is the right reading for a comparison verdict.
+        colour = {"BUY": "🟢", "SELL": "🔴", "HOLD": "🟡", "TOO": "⚖️"}.get(
             f.recommendation.split()[0], "🔵"
         )
         st.subheader("Recommendation")

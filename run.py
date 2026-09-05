@@ -15,7 +15,29 @@ from __future__ import annotations
 import argparse
 import sys
 
-from sage import config
+
+def _force_utf8_console() -> None:
+    """Make stdout/stderr UTF-8 so the trace renders correctly on Windows.
+
+    Windows hands Python a legacy code page (cp1252 here) rather than UTF-8, so
+    the em-dashes and arrows used throughout the trace would otherwise be
+    replaced by '?' — visible mangling in a demo whose whole point is a readable
+    reasoning trace. ``reconfigure`` is available on Python 3.7+; the guard keeps
+    the CLI working if stdout has been swapped for a stream that lacks it (as
+    pytest's capture does).
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+        except (AttributeError, ValueError):  # pragma: no cover - non-standard stream
+            pass
+
+
+# Applied at import time so `python run.py` and `import run` both get a console
+# that can render the trace.
+_force_utf8_console()
+
+from sage import config  # noqa: E402 - must follow the console fix
 from sage.agent import create_engine
 from sage.display import render_trace
 from sage.tools import TOOL_REGISTRY

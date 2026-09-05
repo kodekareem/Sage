@@ -90,11 +90,37 @@ def extract_tickers(question: str) -> list[str]:
 
 
 def detect_intent(question: str, tickers: list[str]) -> str:
-    """Return ``"compare"`` or ``"single"`` for the question."""
+    """Return the reasoning path a question calls for.
+
+    ``"size"``     — a risk/position-sizing question ("how many shares...")
+    ``"compare"``  — two or more candidates weighed against each other
+    ``"single"``   — a buy/sell/hold judgement on one stock
+    """
     q = question.lower()
+    # Sizing is checked first: "how many shares of AAPL" names one ticker but is
+    # not a buy/sell/hold question.
+    if re.search(r"\b(position size|how many shares|risk|stop[- ]?loss)\b", q):
+        # Only treat it as sizing when there are numbers to size with.
+        if re.search(r"\d", q):
+            return "size"
     if len(tickers) >= 2 or " vs " in q or "compare" in q or "versus" in q:
         return "compare"
     return "single"
+
+
+def extract_money(question: str) -> list[float]:
+    """Pull numeric quantities out of a question, ignoring ticker-like tokens.
+
+    Handles ``$10,000``, ``10000``, ``2%`` and ``150.50`` alike, preserving the
+    order they appear so the caller can map them onto expected arguments.
+    """
+    values: list[float] = []
+    for raw in re.findall(r"\$?\d[\d,]*(?:\.\d+)?", question):
+        try:
+            values.append(float(raw.replace("$", "").replace(",", "")))
+        except ValueError:
+            continue
+    return values
 
 
 # --------------------------------------------------------------------------- #
@@ -123,9 +149,159 @@ class RuleEngine:
             return result
 
         intent = detect_intent(question, tickers)
+        if intent == "size":
+            return self._run_position_size(question, tickers[0], result)
         if intent == "compare":
             return self._run_comparison(question, tickers, result)
         return self._run_single(question, tickers[0], result)
+
+    # -- risk-based position sizing ---------------------------------------- #
+    def _run_position_size(self, question: str, ticker: str, result: ReActResult) -> ReActResult:
+        """Answer "how many shares should I buy?" with explicit risk arithmetic.
+
+        The numbers are read from the question in the order a user states them
+        (account size, risk percent, entry, stop). When the entry price is not
+        given, the agent looks it up with ``get_quote`` first — which is itself a
+        visible reasoning step rather than a hidden default.
+        """
+        # Read the labelled values first — a stop or entry named in words is far
+        # more reliable than the order the numbers happen to appear in.
+        def labelled(pattern: str) -> float | None:
+            match = re.search(pattern, question, re.IGNORECASE)
+            if not match:
+                return None
+            try:
+                return float(match.group(1).replace("$", "").replace(",", ""))
+            except ValueError:
+                return None
+
+        # A risk percentage is the value written with a % sign, if present.
+        pct_match = re.search(r"(\d+(?:\.\d+)?)\s*%", question)
+        risk_pct = float(pct_match.group(1)) if pct_match else None
+
+        stop = labelled(r"stop(?:[- ]?loss)?\s*(?:price\s*)?(?:at|of|is|:)?\s*\$?([\d,]+(?:\.\d+)?)")
+        entry = labelled(r"(?:entry|buying|buy|enter(?:ing)?)\s*(?:at|price|of)?\s*\$?([\d,]+(?:\.\d+)?)")
+        account = labelled(
+            r"(?:account|portfolio|capital|have|balance)\s*(?:of|is|size|:)?\s*\$?([\d,]+(?:\.\d+)?)"
+        )
+
+        # Fall back to positional reading only for values not named explicitly,
+        # skipping any number already claimed by a label.
+        claimed = {v for v in (risk_pct, stop, entry, account) if v is not None}
+        remaining = [n for n in extract_money(question) if n not in claimed]
+        if account is None and remaining:
+            account = remaining.pop(0)
+        if entry is None and remaining:
+            entry = remaining.pop(0)
+        if stop is None and remaining:
+            stop = remaining.pop(0)
+
+        step_index = 1
+
+        # If no entry price was quoted, fetch the live one — visibly.
+        if entry is None:
+            thought = (
+                f"To size a position in {ticker} I need an entry price, and the "
+                "question doesn't state one. I'll use the current market price."
+            )
+            obs = run_tool("get_quote", {"ticker": ticker})
+            result.steps.append(
+                ReActStep(
+                    index=step_index,
+                    thought=thought,
+                    action=Action(tool="get_quote", tool_input={"ticker": ticker}),
+                    observation=obs,
+                )
+            )
+            step_index += 1
+            if not obs.get("ok"):
+                result.error = obs.get("error", "Could not fetch a price to size against.")
+                return result
+            entry = obs.get("price")
+
+        if account is None or risk_pct is None or entry is None:
+            result.error = (
+                "To size a position I need an account size, a risk percentage, and "
+                "a stop price — for example: 'I have $10,000, risking 2% on AAPL "
+                "at 150 with a stop at 140.'"
+            )
+            return result
+
+        # A missing stop is a real gap, not something to invent: say so.
+        if stop is None:
+            result.error = (
+                "I need a stop-loss price to work out the risk per share. "
+                "Add one, for example '... with a stop at 140'."
+            )
+            return result
+
+        tool_input = {
+            "account_size": account,
+            "risk_pct": risk_pct,
+            "entry": entry,
+            "stop": stop,
+        }
+        thought = (
+            f"Now I can size the {ticker} position: risking {risk_pct}% of "
+            f"{account} with an entry at {entry} and a stop at {stop}."
+        )
+        obs = run_tool("estimate_position_size", tool_input)
+        result.steps.append(
+            ReActStep(
+                index=step_index,
+                thought=thought,
+                action=Action(tool="estimate_position_size", tool_input=tool_input),
+                observation=obs,
+            )
+        )
+
+        if not obs.get("ok"):
+            result.error = obs.get("error", "Could not compute a position size.")
+            return result
+
+        def money(value) -> str:
+            """Render a number without a pointless trailing '.0'."""
+            if isinstance(value, float) and value.is_integer():
+                return str(int(value))
+            return str(value)
+
+        shares = obs["shares"]
+        unit = "share" if shares == 1 else "shares"
+
+        # Zero shares is a real answer, not an error: the stop is too wide for
+        # the risk budget. Say so plainly instead of returning "0 shares".
+        if shares == 0:
+            rationale = (
+                f"Risking {money(risk_pct)}% of a {money(account)} account allows "
+                f"{money(obs['risk_amount'])} of loss, but with an entry at "
+                f"{money(entry)} and a stop at {money(stop)}, a single share "
+                f"already risks {money(obs['per_share_risk'])}. Even one share "
+                "would exceed the risk budget, so this trade does not fit the "
+                "stated limit — widen the budget, or use a tighter stop."
+            )
+            result.final = FinalAnswer(
+                recommendation="0 shares — trade does not fit your risk limit",
+                confidence="high",
+                rationale=rationale,
+            )
+            return result
+
+        rationale = (
+            f"Risking {money(risk_pct)}% of a {money(account)} account is "
+            f"{money(obs['risk_amount'])}. With an entry at {money(entry)} and a "
+            f"stop at {money(stop)}, each share risks "
+            f"{money(obs['per_share_risk'])}, so {shares} {unit} keeps the loss "
+            f"within that budget if the stop is hit. That position is worth "
+            f"{money(obs['position_value'])}, or {obs['position_pct_of_account']}% "
+            "of the account. This is position sizing only — it is not a view on "
+            f"whether {ticker} is worth buying."
+        )
+        result.final = FinalAnswer(
+            recommendation=f"{shares} {unit}",
+            confidence="high",  # arithmetic, not judgement
+            rationale=rationale,
+        )
+        return result
 
     # -- single-stock buy/sell/hold ---------------------------------------- #
     def _run_single(self, question: str, ticker: str, result: ReActResult) -> ReActResult:
@@ -135,6 +311,12 @@ class RuleEngine:
                 "how it moved most recently.",
                 "get_quote",
                 {"ticker": ticker},
+            ),
+            (
+                "A single day says little on its own, so I'll look at how the stock "
+                "has performed over the last six months for context.",
+                "get_price_history",
+                {"ticker": ticker, "period": "6mo"},
             ),
             (
                 "Next I want the trend and momentum picture: RSI and the 50/200-day "
@@ -182,8 +364,24 @@ class RuleEngine:
         tech = obs.get("calculate_technical_indicators", {})
         fund = obs.get("get_fundamentals", {})
         quote = obs.get("get_quote", {})
+        history = obs.get("get_price_history", {})
 
         bull, bear, reasons = 0, 0, []
+
+        # Medium-term performance: a six-month return is context the day's move
+        # cannot give. Only a decisive move counts, so noise doesn't sway it.
+        if history.get("ok"):
+            period_return = history.get("period_return_pct")
+            period = history.get("period", "6mo")
+            if isinstance(period_return, (int, float)):
+                if period_return >= 10:
+                    bull += 1
+                    reasons.append(f"it is up {period_return}% over the last {period}")
+                elif period_return <= -10:
+                    bear += 1
+                    reasons.append(f"it is down {abs(period_return)}% over the last {period}")
+                else:
+                    reasons.append(f"it is broadly flat over the last {period} ({period_return}%)")
 
         # Trend: price vs 200-day SMA, and the 50/200 crossover.
         if tech.get("ok"):
@@ -320,16 +518,42 @@ class RuleEngine:
             scores[tk] = score
             notes[tk] = why
 
-        # Winner = highest score; ties fall back to the first mentioned.
-        winner = max(scores, key=lambda k: scores[k])
-        ordered = sorted(scores, key=lambda k: scores[k], reverse=True)
-        margin = scores[ordered[0]] - (scores[ordered[1]] if len(ordered) > 1 else 0)
-        confidence = "high" if margin >= 2 else "medium" if margin == 1 else "low"
+        # Rank by score, breaking display order alphabetically so the trace is
+        # deterministic regardless of the order the tickers were mentioned in.
+        ordered = sorted(scores, key=lambda k: (-scores[k], k))
+        top_score = scores[ordered[0]]
+        # Every ticker sharing the top score is a genuine joint leader.
+        leaders = [tk for tk in ordered if scores[tk] == top_score]
+        runner_up = next((scores[tk] for tk in ordered if scores[tk] < top_score), None)
+        margin = top_score - runner_up if runner_up is not None else 0
 
         detail = "; ".join(
             f"{tk}: {', '.join(notes[tk]) or 'no strong signals'} (score {scores[tk]})"
             for tk in ordered
         )
+
+        # A dead heat must be reported as one. Silently picking a "winner" out of
+        # equal scores would put a preference in the verdict that the visible
+        # trace cannot justify — which would undermine the whole point of the
+        # trace. Being honest about a tie is the more useful answer anyway.
+        if len(leaders) > 1:
+            joined = " and ".join(leaders)
+            recommendation = f"TOO CLOSE TO CALL: {joined}"
+            rationale = (
+                f"Comparing the candidates — {detail}. "
+                f"{joined} score equally on this composite ({top_score}), so the "
+                "evidence gathered here does not separate them. Rather than pick "
+                "one arbitrarily, Sage reports the tie: distinguishing them would "
+                "need criteria beyond the trend, momentum and valuation signals "
+                "checked above."
+            )
+            return (
+                FinalAnswer(recommendation=recommendation, confidence="low", rationale=rationale),
+                scores,
+            )
+
+        winner = leaders[0]
+        confidence = "high" if margin >= 2 else "medium" if margin == 1 else "low"
         rationale = (
             f"Comparing the candidates — {detail}. "
             f"On this composite, {winner} screens strongest, so it is the preferred "

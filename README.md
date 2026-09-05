@@ -21,6 +21,9 @@ Ask a natural-language question such as:
 
 - *“Should I buy NVIDIA right now?”* → a **buy / sell / hold** verdict
 - *“Compare AAPL and MSFT for a long-term hold.”* → a **comparison verdict**
+  (or an explicit *“too close to call”* when the evidence genuinely ties)
+- *“I have $10,000, risking 2% on AAPL at 150 with a stop at 140 — how many
+  shares?”* → a **risk-based position size**
 
 Sage runs an explicit loop and shows you the whole thing:
 
@@ -77,7 +80,7 @@ special-case an engine.
 
 | Engine | Description | Needs |
 |---|---|---|
-| **`rule`** (default) | Deterministic, free, no-key. Scripts sensible thoughts, calls the **real** tools in a sensible order against **real** data, records every observation, and derives a transparent buy/sell/hold (or comparison) verdict via bull/bear point scoring. It genuinely walks the loop — it never shortcuts. This is what the deployed demo uses. | Nothing (only `yfinance` network) |
+| **`rule`** (default) | Deterministic, free, no-key. Scripts sensible thoughts, calls the **real** tools in a sensible order against **real** data, records every observation, and derives a transparent buy/sell/hold (or comparison) verdict via bull/bear point scoring. Ties are reported as ties rather than broken arbitrarily. It genuinely walks the loop — it never shortcuts. This is what the deployed demo uses. | Nothing (only `yfinance` network) |
 | **`ollama`** | A real **local** LLM via [Ollama](https://ollama.com) (e.g. `llama3.2`), prompted to emit Thought/Action/Action-Input that Sage parses and executes. For genuine LLM reasoning at no cost on a local machine. | Ollama running at `localhost:11434` |
 | **`claude`** | The same hand-rolled loop backed by the Anthropic API. | `ANTHROPIC_API_KEY` |
 
@@ -159,8 +162,25 @@ synthetic prices, so no test touches the network. It covers:
   Answer (including JSON in code fences and free-text finals), and reports
   malformed output instead of crashing.
 - **ReAct engine** — the rule engine produces a valid step-by-step trace and a
-  sensible verdict; the LLM loop executes tools, **respects the step cap**, and
-  recovers from malformed output.
+  sensible verdict; comparison verdicts are order-independent and declare ties
+  honestly; position sizing handles labelled inputs and impossible trades; the
+  LLM loop executes tools, **respects the step cap**, and recovers from
+  malformed output.
+- **LLM network path** (`tests/test_llm_http.py`) — the Ollama engine is driven
+  against a real local HTTP server speaking Ollama's `/api/chat` protocol, so
+  sockets, JSON and the parser are exercised, not just the loop's control flow.
+
+### Verification scripts
+
+Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
+
+| Script | What it proves |
+|---|---|
+| `verify_ties.py` | Tied comparisons are declared, order-independent, and a real winner is still picked |
+| `verify_encoding.py` | The CLI keeps its non-ASCII characters on a legacy cp1252 Windows console |
+| `verify_tool_coverage.py` | Every registered tool is genuinely reachable by the engine |
+| `verify_live.py` | Against **live** market data, every figure cited in the rationale traces back to a recorded observation |
+| `verify_llm_engine.py` | The ReAct loop against a **real** served model (needs Ollama or an API key; fails loudly rather than skipping) |
 
 ---
 
@@ -177,12 +197,24 @@ synthetic prices, so no test touches the network. It covers:
 ## Honest evaluation — what's working, limited, and what I'd improve
 
 **Working**
-- The explainable ReAct loop and full structured trace work end-to-end across
-  all three engines, with one shared data shape.
+- The explainable ReAct loop and full structured trace share one data shape
+  across all three engines, so the UI and tests never special-case an engine.
 - The rule engine runs with zero keys and produces a genuine, inspectable,
-  step-by-step trace from real market data — ideal for a reliable live demo.
-- The tool library is clean, registry-driven, and easily extensible.
-- Tests give real evidence: tools, parser, and engine loop (incl. step cap).
+  step-by-step trace from real market data — ideal for a reliable live demo. It
+  is verified against **live** data, including that every figure quoted in a
+  recommendation traces back to a recorded observation (`verify_live.py`).
+- The tool library is clean, registry-driven, and easily extensible, and all
+  six tools are genuinely reachable by the agent (`verify_tool_coverage.py`).
+- Tests give real evidence: tools, parser, and engine loop (incl. step cap),
+  plus the LLM engine's real HTTP path against a local model server.
+
+**Verified to different depths — an honest distinction**
+- The **`rule`** engine is verified end-to-end against live market data.
+- The **LLM loop** is verified for control flow (unit tests), and for its real
+  network path — sockets, JSON, and malformed-output recovery — against a local
+  HTTP server. Its *reasoning quality* against a live model has **not** been
+  measured; run `python scripts/verify_llm_engine.py` with Ollama or an API key
+  to produce that evidence.
 
 **Limited**
 - The rule engine's verdict is a simple, transparent bull/bear point tally — it
