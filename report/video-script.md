@@ -79,8 +79,10 @@ availability markers.
 
 SAY: Four engines drive the same loop. The default is a deterministic rule
 engine that needs no API key. The other three drive real language models, one
-local through Ollama and two hosted. All four produce an identical trace
-structure, which is what let me compare them in the evaluation.
+local through Ollama and two hosted. The sidebar lists the two that can run
+here; the others need a local model server or a key this deployment does not
+have. All four produce an identical trace structure, which is what let me
+compare them in the evaluation.
 
 ---
 

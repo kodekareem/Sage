@@ -35,23 +35,43 @@ with st.sidebar:
     st.caption("A transparent, tool-using ReAct investment advisor for stocks.")
 
     st.subheader("Reasoning engine")
-    # Show availability so the choice is honest about what will actually run.
-    ollama_ok = config.ollama_available()
-    openai_ok = config.openai_compat_available()
-    claude_ok = config.claude_available()
+    # Only offer engines that can actually run here. Sage ships four, but an
+    # engine needing a local Ollama server or an unset API key can never be
+    # selected on a hosted deployment, so listing it as a dead option is noise
+    # rather than information. The rule engine has no requirements and is
+    # therefore always present.
+    available = {
+        "rule": True,
+        "ollama": config.ollama_available(),
+        "openai": config.openai_compat_available(),
+        "claude": config.claude_available(),
+    }
     labels = {
         "rule": "rule — deterministic, free (default)",
-        "ollama": f"ollama — local LLM {'✅' if ollama_ok else '✕ (not running)'}",
-        "openai": f"openai — hosted open model {'✅' if openai_ok else '✕ (no key)'}",
-        "claude": f"claude — Anthropic API {'✅' if claude_ok else '✕ (no key)'}",
+        "ollama": "ollama — local LLM",
+        "openai": "openai — hosted open model",
+        "claude": "claude — Anthropic API",
     }
+    options = [e for e in config.ENGINES if available.get(e)]
+
     chosen = st.radio(
         "Engine",
-        options=list(config.ENGINES),
+        options=options,
         format_func=lambda k: labels[k],
         index=0,
         label_visibility="collapsed",
     )
+
+    hidden = [e for e in config.ENGINES if not available.get(e)]
+    if hidden:
+        # Say what is missing and why, so the shorter list reads as a
+        # deployment fact rather than as the project having fewer engines.
+        st.caption(
+            f"Sage ships {len(config.ENGINES)} engines. "
+            f"{', '.join(hidden)} {'is' if len(hidden) == 1 else 'are'} hidden here: "
+            "each needs a local model server or an API key this deployment has "
+            "not been given."
+        )
 
     max_steps = st.slider("Max reasoning steps", min_value=3, max_value=12, value=config.MAX_STEPS)
 

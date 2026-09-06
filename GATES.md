@@ -135,3 +135,10 @@ own voice without AI-slop patterns, inside every stated word limit, plus the
   CHECK: python scripts/verify_all_checks.py
   EXPECT: ALL CHECKS VERIFICATION PASSED
   EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=f404345d64f9b7f13eea63a6a3a4ed9a01ff52ebc8b9b6ed4ccfda988aa16abd; output-bytes=822
+
+- [ ] G17: the sidebar offers every reachable engine and hides only unreachable
+      ones, never hiding the default, and the report still describes the full
+      engine set that remains in the code
+  CHECK: python scripts/verify_engine_visibility.py
+  EXPECT: ENGINE VISIBILITY VERIFICATION PASSED
+  EVIDENCE: pending
