@@ -36,7 +36,7 @@ def probe_daily_budget(key: str) -> int | None:
     install_offline_data()  # keep the probe off the network for market data
     from sage.agent import create_engine
 
-    result = create_engine("groq").run("Should I buy NVDA right now?")
+    result = create_engine("openai").run("Should I buy NVDA right now?")
     if not result.error:
         return None
 
@@ -49,18 +49,18 @@ def probe_daily_budget(key: str) -> int | None:
 
 
 def main() -> None:
-    key = config.get_groq_key()
+    key = config.get_openai_compat_key()
     if not key:
-        print("GROQ_API_KEY is not set")
+        print("no API key is set (OPENAI_COMPAT_API_KEY or GROQ_API_KEY)")
         sys.exit(1)
 
     resp = requests.post(
-        f"{config.GROQ_URL}/chat/completions",
+        f"{config.OPENAI_COMPAT_URL}/chat/completions",
         headers={"Authorization": f"Bearer {key}"},
         json={
-            "model": config.GROQ_MODEL,
+            "model": config.OPENAI_COMPAT_MODEL,
             "messages": [{"role": "user", "content": "Reply with exactly: OK"}],
-            "max_tokens": config.GROQ_MAX_TOKENS,
+            "max_tokens": config.OPENAI_COMPAT_MAX_TOKENS,
         },
         timeout=60,
     )

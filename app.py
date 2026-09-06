@@ -37,12 +37,12 @@ with st.sidebar:
     st.subheader("Reasoning engine")
     # Show availability so the choice is honest about what will actually run.
     ollama_ok = config.ollama_available()
-    groq_ok = config.groq_available()
+    openai_ok = config.openai_compat_available()
     claude_ok = config.claude_available()
     labels = {
         "rule": "rule — deterministic, free (default)",
         "ollama": f"ollama — local LLM {'✅' if ollama_ok else '✕ (not running)'}",
-        "groq": f"groq — hosted open model {'✅' if groq_ok else '✕ (no key)'}",
+        "openai": f"openai — hosted open model {'✅' if openai_ok else '✕ (no key)'}",
         "claude": f"claude — Anthropic API {'✅' if claude_ok else '✕ (no key)'}",
     }
     chosen = st.radio(

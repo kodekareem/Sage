@@ -24,24 +24,43 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
 # current Sonnet model id and allow an override via the environment.
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 
-# Groq serves open-weight models behind an OpenAI-compatible API. It is fast and
-# has a free tier, which makes it the practical way to demonstrate the loop
-# driving a *real* LLM without needing a local GPU or a paid key.
-GROQ_URL = os.environ.get("GROQ_URL", "https://api.groq.com/openai/v1")
-# Qwen follows the plain-text Thought/Action/Action-Input format reliably. Some
-# other served models (notably the GPT-OSS family) reach for their built-in
-# function-calling mechanism instead, which Sage deliberately does not use — the
-# engine recovers from that, but a model that emits the text format is a better
-# demonstration of the loop.
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
+# The OpenAI-compatible engine. Many providers expose the same
+# /chat/completions protocol — Groq, OpenRouter, Together, a local vLLM server —
+# so the engine is named for the protocol it speaks rather than for one vendor.
+# Point it anywhere by setting OPENAI_COMPAT_URL, _MODEL and _API_KEY.
+#
+# The GROQ_* names are still read as a fallback, because they were the original
+# spelling and may be set in an existing environment or deployment.
+def _setting(name: str, default: str) -> str:
+    """Read OPENAI_COMPAT_<name>, falling back to the older GROQ_<name>."""
+    return os.environ.get(f"OPENAI_COMPAT_{name}") or os.environ.get(
+        f"GROQ_{name}", default
+    )
 
-# Free-tier Groq keys cap *output* tokens per minute (1000 on the default
-# model). A request asking for more than the cap is refused outright, however
-# long you wait, so the per-call budget must sit under it. One ReAct turn is a
-# short thought plus a small JSON action, so this is comfortably enough.
-GROQ_MAX_TOKENS = int(os.environ.get("GROQ_MAX_TOKENS", "800"))
 
-ENGINES = ("rule", "ollama", "groq", "claude")
+# Defaults to OpenRouter, which is what the evaluation in the report was run
+# against and which serves a range of free open-weight models.
+OPENAI_COMPAT_URL = _setting("URL", "https://openrouter.ai/api/v1")
+
+# minimax-m3 follows the plain-text Thought/Action/Action-Input format reliably.
+# Some other served models (notably the GPT-OSS family) reach for their built-in
+# function-calling mechanism instead, which Sage deliberately does not use. The
+# engine recovers from that, but a model that emits the text format directly is
+# a better demonstration of the loop.
+OPENAI_COMPAT_MODEL = _setting("MODEL", "minimax/minimax-m3:free")
+
+# Free tiers commonly cap *output* tokens per minute. A request asking for more
+# than the cap is refused outright however long you wait, so the per-call budget
+# must sit under it. One ReAct turn is a short thought plus a small JSON action,
+# so this is comfortably enough.
+OPENAI_COMPAT_MAX_TOKENS = int(_setting("MAX_TOKENS", "800"))
+
+# Kept as aliases so existing code and configurations keep working.
+GROQ_URL = OPENAI_COMPAT_URL
+GROQ_MODEL = OPENAI_COMPAT_MODEL
+GROQ_MAX_TOKENS = OPENAI_COMPAT_MAX_TOKENS
+
+ENGINES = ("rule", "ollama", "openai", "claude")
 
 
 def get_anthropic_key() -> str | None:
@@ -72,27 +91,33 @@ def ollama_available(url: str = OLLAMA_URL, timeout: float = 0.5) -> bool:
         return False
 
 
-def get_groq_key() -> str | None:
-    """Return the Groq API key from the environment or Streamlit secrets.
+def get_openai_compat_key() -> str | None:
+    """Return the OpenAI-compatible provider's API key.
 
     Mirrors :func:`get_anthropic_key`: the environment wins, Streamlit secrets
     are a fallback for the deployed app, and neither lookup may crash a CLI or
-    test run.
+    test run. Both the current and the older ``GROQ_API_KEY`` spelling are
+    accepted, so an environment configured before the rename keeps working.
     """
-    key = os.environ.get("GROQ_API_KEY")
-    if key:
-        return key
+    for name in ("OPENAI_COMPAT_API_KEY", "GROQ_API_KEY"):
+        key = os.environ.get(name)
+        if key:
+            return key
     try:  # pragma: no cover - depends on Streamlit runtime
         import streamlit as st
 
-        return st.secrets.get("GROQ_API_KEY")  # type: ignore[no-any-return]
+        for name in ("OPENAI_COMPAT_API_KEY", "GROQ_API_KEY"):
+            key = st.secrets.get(name)
+            if key:
+                return key  # type: ignore[no-any-return]
     except Exception:
         return None
+    return None
 
 
-def groq_available() -> bool:
-    """Return True if a Groq key is present and ``requests`` is importable."""
-    if get_groq_key() is None:
+def openai_compat_available() -> bool:
+    """Return True if a key is present and ``requests`` is importable."""
+    if get_openai_compat_key() is None:
         return False
     try:
         import requests  # noqa: F401
@@ -100,6 +125,11 @@ def groq_available() -> bool:
         return True
     except Exception:
         return False
+
+
+# Older names, kept so existing callers and tests keep working.
+get_groq_key = get_openai_compat_key
+groq_available = openai_compat_available
 
 
 def claude_available() -> bool:
@@ -122,8 +152,9 @@ def resolve_engine(preferred: str | None) -> str:
     """
     if preferred == "ollama" and ollama_available():
         return "ollama"
-    if preferred == "groq" and groq_available():
-        return "groq"
+    # "groq" is accepted as the engine's former name.
+    if preferred in ("openai", "groq") and openai_compat_available():
+        return "openai"
     if preferred == "claude" and claude_available():
         return "claude"
     # "rule", an unavailable LLM engine, or no preference all land here.

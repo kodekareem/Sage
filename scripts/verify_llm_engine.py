@@ -11,10 +11,12 @@ the loop "works across all three engines" on the strength of a stub.
 Usage
 -----
     python scripts/verify_llm_engine.py              # auto-detect a backend
+    python scripts/verify_llm_engine.py --engine openai
     python scripts/verify_llm_engine.py --engine ollama
     python scripts/verify_llm_engine.py --engine claude
 
 Requires one of:
+  * OPENAI_COMPAT_API_KEY set (a free OpenRouter or Groq key works)
   * Ollama running locally  (`ollama serve` + `ollama pull llama3.2`)
   * ANTHROPIC_API_KEY set in the environment
 
@@ -31,7 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sage import config
-from sage.agent import ClaudeEngine, GroqEngine, OllamaEngine
+from sage.agent import ClaudeEngine, OllamaEngine, OpenAICompatEngine
 
 QUESTION = "Should I buy NVDA right now?"
 
@@ -55,9 +57,9 @@ def is_rate_limit(error: str) -> bool:
 
 def pick_engine(requested: str | None):
     """Return a live engine instance, or exit if none is reachable."""
-    if requested in (None, "groq") and config.groq_available():
-        print(f"backend: groq ({config.GROQ_MODEL} at {config.GROQ_URL})")
-        return GroqEngine()
+    if requested in (None, "openai", "groq") and config.openai_compat_available():
+        print(f"backend: openai ({config.OPENAI_COMPAT_MODEL} at {config.OPENAI_COMPAT_URL})")
+        return OpenAICompatEngine()
     if requested in (None, "ollama") and config.ollama_available():
         print(f"backend: ollama ({config.OLLAMA_MODEL} at {config.OLLAMA_URL})")
         return OllamaEngine()
@@ -77,7 +79,7 @@ def pick_engine(requested: str | None):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--engine", choices=("groq", "ollama", "claude"), default=None)
+    parser.add_argument("--engine", choices=("openai", "groq", "ollama", "claude"), default=None)
     args = parser.parse_args()
 
     engine = pick_engine(args.engine)

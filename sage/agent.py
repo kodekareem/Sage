@@ -2,7 +2,7 @@
 
 A single agent answers a natural-language investment question by running an
 explicit Thought -> Action -> Observation loop, then emitting a Final Answer.
-Three interchangeable *engines* implement that loop behind one interface:
+Four interchangeable *engines* implement that loop behind one interface:
 
 ``rule``    A deterministic, free, no-key engine. It scripts sensible thoughts,
             selects the appropriate real tools in a sensible order, calls them
@@ -14,9 +14,13 @@ Three interchangeable *engines* implement that loop behind one interface:
             Input we parse and execute, feeding observations back until it
             produces a Final Answer.
 
+``openai``  Any provider speaking the OpenAI chat-completions protocol —
+            OpenRouter, Groq, Together, a local vLLM server. Named for the
+            protocol rather than a vendor, since the provider is a setting.
+
 ``claude``  The same hand-rolled loop, backed by the Anthropic API.
 
-The two LLM engines share :class:`LLMEngine`; only the "call the model" step
+The three LLM engines share :class:`LLMEngine`; only the "call the model" step
 differs. No agent framework (LangChain etc.) is used — hand-rolling the loop is
 deliberate and keeps it legible for the report.
 
@@ -921,24 +925,28 @@ class OllamaEngine(LLMEngine):
         return _parse_duration((getattr(response, "headers", {}) or {}).get("retry-after"))
 
 
-class GroqEngine(LLMEngine):
-    """Drives an open-weight model on Groq through the same ReAct loop.
+class OpenAICompatEngine(LLMEngine):
+    """Drives any provider speaking the OpenAI chat-completions protocol.
 
-    Groq exposes an OpenAI-compatible ``/chat/completions`` endpoint, so the
-    message list the loop already maintains — including the ``system`` role —
-    can be posted unchanged. It runs open-weight models (Llama, Qwen, GPT-OSS)
-    on a free tier, which makes it the practical way to demonstrate the loop
-    driving a genuine LLM without a local GPU or a paid key.
+    Groq, OpenRouter, Together and a locally hosted vLLM server all expose the
+    same ``/chat/completions`` endpoint, so the message list the loop already
+    maintains — including the ``system`` role — can be posted unchanged. The
+    engine is named for that protocol rather than for one vendor, because the
+    provider is a configuration choice: set ``OPENAI_COMPAT_URL`` and
+    ``OPENAI_COMPAT_MODEL`` to point it anywhere.
+
+    The evaluation reported in the project write-up was run through OpenRouter,
+    which is the default here, against a free open-weight model.
     """
 
-    name = "groq"
+    name = "openai"
 
-    def __init__(self, model: str = config.GROQ_MODEL, url: str = config.GROQ_URL,
+    def __init__(self, model: str = None, url: str = None,
                  max_steps: int = config.MAX_STEPS):
         super().__init__(max_steps=max_steps)
-        self.model = model
-        self.url = url
-        self._key = config.get_groq_key()
+        self.model = model or config.OPENAI_COMPAT_MODEL
+        self.url = url or config.OPENAI_COMPAT_URL
+        self._key = config.get_openai_compat_key()
 
     def complete(self, messages: list[dict]) -> str:
         import requests
@@ -960,7 +968,7 @@ class GroqEngine(LLMEngine):
                 # request, so the call is refused before it starts — no amount
                 # of retrying helps. A ReAct turn is one short Thought plus a
                 # small JSON action, so a much smaller budget is ample.
-                "max_tokens": config.GROQ_MAX_TOKENS,
+                "max_tokens": config.OPENAI_COMPAT_MAX_TOKENS,
             },
             timeout=120,
         )
@@ -1002,7 +1010,7 @@ class GroqEngine(LLMEngine):
         try:
             return payload["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError) as exc:
-            raise RuntimeError(f"Unexpected Groq response shape: {payload}") from exc
+            raise RuntimeError(f"Unexpected response shape from {self.url}: {payload}") from exc
 
     @staticmethod
     def _retry_after_seconds(response) -> Optional[float]:
@@ -1078,6 +1086,10 @@ class GroqEngine(LLMEngine):
         )
 
 
+#: The engine's former name, kept so existing imports keep working.
+GroqEngine = OpenAICompatEngine
+
+
 class ClaudeEngine(LLMEngine):
     """Drives the Anthropic API through the same hand-rolled ReAct loop."""
 
@@ -1144,13 +1156,14 @@ def create_engine(name: str, max_steps: int = config.MAX_STEPS):
                 f"{config.OLLAMA_URL}. Start it with `ollama serve` and pull a model."
             )
         return OllamaEngine(max_steps=max_steps)
-    if name == "groq":
-        if not config.groq_available():
+    if name in ("openai", "groq"):   # "groq" is the engine's former name
+        if not config.openai_compat_available():
             raise RuntimeError(
-                "The Groq engine needs GROQ_API_KEY set (get a free key at "
-                "https://console.groq.com) and the `requests` package installed."
+                "The OpenAI-compatible engine needs OPENAI_COMPAT_API_KEY set "
+                "(a free key from https://openrouter.ai or https://console.groq.com "
+                "works) and the `requests` package installed."
             )
-        return GroqEngine(max_steps=max_steps)
+        return OpenAICompatEngine(max_steps=max_steps)
     if name == "claude":
         if not config.claude_available():
             raise RuntimeError(

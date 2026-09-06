@@ -108,4 +108,11 @@ own voice without AI-slop patterns, inside every stated word limit, plus the
       body text rather than being typed by hand
   CHECK: python scripts/verify_chapter_counts.py
   EXPECT: CHAPTER COUNT VERIFICATION PASSED
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=ef52a223beb1e06c1f334fc9a19e297a0feba97601246d263a54a36aea2502c2; output-bytes=384
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=e45ab6c258cb896b47a48cc9fdbbf84c7ff340f13d190b3b051e223196211d54; output-bytes=384
+
+- [x] G13: the OpenAI-compatible engine is named for the protocol it speaks
+      rather than one vendor, so the app, the report and the evaluation agree
+      on what it is
+  CHECK: python scripts/verify_engine_naming.py
+  EXPECT: ENGINE NAMING VERIFICATION PASSED
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=958085a51bec76dd091c7fc176778577527e663486d90960300c0c4f409dfb7a; output-bytes=329

@@ -7,7 +7,7 @@ CM3020 Artificial Intelligence
 
 **Code repository:** https://github.com/kodekareem/Sage (public)
 
-**Total word count:** 7,984 of 10,500. Counts exclude chapter titles, table and
+**Total word count:** 8,007 of 10,500. Counts exclude chapter titles, table and
 figure captions, and the reference list, as the brief permits.
 
 ---
@@ -259,7 +259,7 @@ verdict. The next chapter describes how this is designed.
 
 ---
 
-## 3. Design (1332/2000 words)
+## 3. Design (1356/2000 words)
 
 Sage is organised as a small set of components, each with a single
 responsibility, connected by one reasoning loop. This chapter describes the data
@@ -339,8 +339,9 @@ can be scored by the same code because they produce the same structure.
 ### 3.5 Four engines behind one interface
 
 Sage provides four reasoning engines behind a single interface, named `rule`,
-`ollama`, `groq` and `claude`, so the engine is a configuration choice rather
-than a structural one.
+`ollama`, `openai` and `claude`, so the engine is a configuration choice rather
+than a structural one. The third is named for the protocol it speaks rather than
+for a vendor, because the provider behind it is itself a setting.
 
 The default is the `rule` engine. It is deterministic, needs no key, and runs
 anywhere, but crucially it still walks the full ReAct loop rather than
@@ -353,9 +354,9 @@ rationale is built from the same readings shown in the trace, so the conclusion
 is fully traceable.
 
 The second engine drives a local language model through Ollama. The third and
-fourth drive hosted models: one speaks the Anthropic API, and one speaks the
-OpenAI compatible chat completions protocol, which covers a wide range of
-providers including Groq and OpenRouter. All three language model engines share
+fourth drive hosted models: one speaks the OpenAI compatible chat completions
+protocol, which covers a wide range of providers including OpenRouter, Groq and
+Together, and one speaks the Anthropic API. All three language model engines share
 one hand written loop: the model is prompted to emit a thought and either an
 action with its input or a final answer, a standalone parser extracts that from
 the model's text, the chosen tool is run, and the observation is fed back. The
@@ -579,7 +580,7 @@ encoding check reproduces the original fault before asserting the fix.
 
 ---
 
-## 5. Evaluation (2033/2500 words)
+## 5. Evaluation (2032/2500 words)
 
 ### 5.1 What needed evaluating, and why the test suite was not enough
 
@@ -639,9 +640,9 @@ and they are the properties that can be honestly assessed.
 
 ### 5.3 Results
 
-The rule engine was scored over all fifteen questions, and the OpenAI compatible
-engine was scored over the same fifteen questions driving minimax-m3, an open
-weight model accessed through OpenRouter.
+The rule engine was scored over all fifteen questions, and the `openai` engine
+was scored over the same fifteen questions driving minimax-m3, an open weight
+model accessed through OpenRouter.
 
 Table 1. Reasoning quality by engine, 15 questions, synthetic fixtures.
 

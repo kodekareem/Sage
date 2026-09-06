@@ -131,15 +131,40 @@ def test_groq_does_not_swallow_other_400s(engine, monkeypatch):
         engine.complete([{"role": "user", "content": "x"}])
 
 
-def test_groq_engine_is_registered_and_falls_back_without_a_key(monkeypatch):
+def test_engine_is_registered_and_falls_back_without_a_key(monkeypatch):
     """The engine is selectable, but never claims availability without a key."""
-    assert "groq" in config.ENGINES
+    assert "openai" in config.ENGINES
 
+    monkeypatch.delenv("OPENAI_COMPAT_API_KEY", raising=False)
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     # Streamlit secrets must not be consulted in a way that fakes availability.
-    monkeypatch.setattr(config, "get_groq_key", lambda: None)
-    assert config.groq_available() is False
-    assert config.resolve_engine("groq") == "rule"
+    monkeypatch.setattr(config, "get_openai_compat_key", lambda: None)
+    assert config.openai_compat_available() is False
+    assert config.resolve_engine("openai") == "rule"
+
+
+def test_the_former_engine_name_still_resolves(monkeypatch):
+    """`groq` was the engine's original name and must keep working.
+
+    Renaming it to match the protocol it speaks should not break an existing
+    script, deployment or command line that still says `groq`.
+    """
+    monkeypatch.setattr(config, "get_openai_compat_key", lambda: "test-key")
+    assert config.resolve_engine("groq") == "openai"
+
+    from sage.agent import GroqEngine, OpenAICompatEngine
+    assert GroqEngine is OpenAICompatEngine
+
+
+def test_the_older_env_var_names_are_still_read(monkeypatch):
+    """GROQ_API_KEY keeps working, so a configured environment is not broken."""
+    monkeypatch.delenv("OPENAI_COMPAT_API_KEY", raising=False)
+    monkeypatch.setenv("GROQ_API_KEY", "legacy-key")
+    assert config.get_openai_compat_key() == "legacy-key"
+
+    # And the current name wins when both are set.
+    monkeypatch.setenv("OPENAI_COMPAT_API_KEY", "current-key")
+    assert config.get_openai_compat_key() == "current-key"
 
 
 def test_recovery_strips_a_namespaced_tool_name(engine, monkeypatch):
