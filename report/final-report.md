@@ -408,9 +408,9 @@ The prototype implements every component described in Chapter 3. It is written
 in Python, version controlled on GitHub, and runs against live market data. This
 chapter describes the parts of the implementation that were technically
 substantial, the algorithms behind them, and the defects found and fixed while
-preparing the system for submission. The codebase is roughly 2,200 lines of
+preparing the system for submission. The codebase is roughly 2,300 lines of
 source across the package and its two front ends, with a further 1,400 lines of
-tests and 1,000 lines of verification scripts.
+tests and 3,000 lines of verification scripts.
 
 ### 4.1 The reasoning loop
 
@@ -540,7 +540,7 @@ on its final print after every question had been answered and paid for.
 
 ### 4.7 Test suite
 
-The suite comprises 85 tests and runs entirely offline. An autouse fixture
+The suite comprises 87 tests and runs entirely offline. An autouse fixture
 replaces the data layer with deterministic synthetic price series and
 fundamentals, crafted so that indicator signals and verdicts are predictable:
 one ticker is a strong uptrend, one a mild uptrend, one a downtrend. No test
@@ -776,7 +776,7 @@ data as well as fixtures. The tool library is clean and registry driven, and all
 six tools are reachable by the agent. The system degrades sensibly: unavailable
 engines fall back, rate limits are retried and then explained, malformed model
 output is recorded and recovered from, and unanswerable questions are refused
-rather than guessed at. The test suite of 85 tests runs offline and covers the
+rather than guessed at. The test suite of 87 tests runs offline and covers the
 tools, the parser, the loop, and the provider specific failure modes.
 
 ### 5.7 Failures and limitations

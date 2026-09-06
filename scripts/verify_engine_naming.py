@@ -68,14 +68,25 @@ def main() -> None:
             fail(f"app.py has no sidebar label for the '{engine_name}' engine")
     print("app.py labels every registered engine")
 
-    # --- the report must agree with the code ------------------------------
-    if REPORT.exists():
-        text = REPORT.read_text(encoding="utf-8")
+    # --- every document must agree with the code --------------------------
+    # The README was missed when the engine was first renamed, which is exactly
+    # the drift this check exists to catch, so it is checked alongside the
+    # report rather than trusted.
+    for path in (REPORT, REPO / "README.md", REPO / "report" / "video-script.md"):
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
         if "`groq`" in text:
-            fail("the report still names a 'groq' engine, which no longer exists")
-        if "OpenRouter" not in text:
-            fail("the report does not name the provider the evaluation used")
-        print("report names the protocol and the provider consistently")
+            fail(f"{path.name} still names a 'groq' engine, which no longer exists")
+        # A bare mention of Groq as one provider among several is fine; naming
+        # it as *the* engine or its environment variable is not.
+        for stale in ("GROQ_API_KEY", "GROQ_MODEL", "GROQ_MAX_TOKENS", "--engine groq"):
+            if stale in text and "GROQ_*" not in text:
+                fail(f"{path.name} still instructs the reader to use {stale}")
+        print(f"{path.name}: consistent with the engine's name")
+
+    if REPORT.exists() and "OpenRouter" not in REPORT.read_text(encoding="utf-8"):
+        fail("the report does not name the provider the evaluation used")
 
     print("ENGINE NAMING VERIFICATION PASSED")
 

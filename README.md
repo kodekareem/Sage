@@ -45,7 +45,7 @@ sage/
   data_layer.py    yfinance wrapper + in-memory cache + graceful errors
   tools.py         The 6-tool analysis library + a registry the agent is given
   react.py         The shared ReAct data structures (Step / Action / Trace / Result)
-  agent.py         The four engines (rule / ollama / groq / claude) behind one interface
+  agent.py         The four engines (rule / ollama / openai / claude) behind one interface
   display.py       CLI rendering of a trace
 app.py             Streamlit web app (the demo centerpiece)
 run.py             CLI entry point
@@ -82,7 +82,7 @@ special-case an engine.
 |---|---|---|
 | **`rule`** (default) | Deterministic, free, no-key. Scripts sensible thoughts, calls the **real** tools in a sensible order against **real** data, records every observation, and derives a transparent buy/sell/hold (or comparison) verdict via bull/bear point scoring. Ties are reported as ties rather than broken arbitrarily. It genuinely walks the loop — it never shortcuts. This is what the deployed demo uses. | Nothing (only `yfinance` network) |
 | **`ollama`** | A real **local** LLM via [Ollama](https://ollama.com) (e.g. `llama3.2`), prompted to emit Thought/Action/Action-Input that Sage parses and executes. For genuine LLM reasoning at no cost on a local machine. | Ollama running at `localhost:11434` |
-| **`groq`** | A real **hosted** open-weight model (default `qwen/qwen3.8-27b`) through Groq's OpenAI-compatible API. Free tier, no GPU needed — the easiest way to see the loop driven by a genuine LLM. Rate limits are retried with backoff. | `GROQ_API_KEY` ([free](https://console.groq.com)) |
+| **`openai`** | Any provider speaking the OpenAI chat-completions protocol — OpenRouter, Groq, Together, a local vLLM server. Defaults to OpenRouter with `minimax/minimax-m3:free`, which is what the reported evaluation used. Rate limits are retried with backoff. | `OPENAI_COMPAT_API_KEY` ([free](https://openrouter.ai)) |
 | **`claude`** | The same hand-rolled loop backed by the Anthropic API. | `ANTHROPIC_API_KEY` |
 
 The LLM loop is **hand-rolled** (no LangChain) — that's deliberate and keeps the
@@ -98,10 +98,10 @@ the run. If the limit still holds after retrying, Sage says so explicitly:
 a throughput cap is reported as a throughput cap, never as a bad key, because
 those need opposite responses from the user.
 
-> Groq's free tier also caps *output* tokens per minute (1000 on the default
-> model), so `GROQ_MAX_TOKENS` defaults to 800. Asking for more than the cap is
-> refused on every request no matter how long you wait — a limit no retry can
-> solve, and one worth knowing before a live demo.
+> Free tiers also cap *output* tokens per minute (Groq's is 1000 on some
+> models), so `OPENAI_COMPAT_MAX_TOKENS` defaults to 800. Asking for more than
+> the cap is refused on every request no matter how long you wait — a limit no
+> retry can solve, and one worth knowing before a live demo.
 
 > **Engine selection:** if a requested LLM engine isn't available (no Ollama, no
 > key), Sage automatically falls back to `rule`, so it always works out of the
@@ -127,10 +127,12 @@ pip install -r requirements.txt
 
 ### (Optional) enable the LLM engines
 
-- **Groq** (free, hosted — easiest): get a key at
-  [console.groq.com](https://console.groq.com), then
-  `export GROQ_API_KEY=...` (PowerShell: `$env:GROQ_API_KEY="..."`).
-  Select the `groq` engine. Override the model with `GROQ_MODEL` if you like.
+- **A hosted model** (free, easiest): get a key at
+  [openrouter.ai](https://openrouter.ai), then
+  `export OPENAI_COMPAT_API_KEY=...` (PowerShell: `$env:OPENAI_COMPAT_API_KEY="..."`).
+  Select the `openai` engine. Point it at another provider with
+  `OPENAI_COMPAT_URL` and `OPENAI_COMPAT_MODEL`. The older `GROQ_*` names are
+  still read, so an existing setup keeps working.
 - **Ollama** (free, local): install Ollama, then `ollama pull llama3.2` and make
   sure `ollama serve` is running. Select the `ollama` engine.
 - **Claude** (paid): set `ANTHROPIC_API_KEY` in your environment, or copy
@@ -163,7 +165,7 @@ python run.py ask "Compare AAPL and MSFT for a long-term hold" --engine rule
 python run.py tools
 ```
 
-`--engine` accepts `rule` (default), `ollama`, `groq`, or `claude`. `--max-steps` caps
+`--engine` accepts `rule` (default), `ollama`, `openai`, or `claude`. `--max-steps` caps
 the reasoning loop.
 
 ---
@@ -206,7 +208,7 @@ Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
 | `verify_encoding.py` | The CLI keeps its non-ASCII characters on a legacy cp1252 Windows console |
 | `verify_tool_coverage.py` | Every registered tool is genuinely reachable by the engine |
 | `verify_live.py` | Against **live** market data, every figure cited in the rationale traces back to a recorded observation |
-| `verify_llm_engine.py` | The ReAct loop against a **real** served model — `--engine groq` (or `ollama`/`claude`); fails loudly rather than skipping when no backend is reachable |
+| `verify_llm_engine.py` | The ReAct loop against a **real** served model — `--engine openai` (or `ollama`/`claude`); fails loudly rather than skipping when no backend is reachable |
 | `verify_no_secrets.py` | No API key or credential is committed to the repo |
 | `verify_no_key_fallback.py` | The app still works with every key stripped, as the deployed demo does |
 | `verify_rate_limit_reporting.py` | A rate limit is reported as a rate limit and a bad key as a bad key (both directions checked) |
@@ -218,7 +220,7 @@ Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
 1. Push this repo to GitHub.
 2. Create a new Streamlit app pointing at `app.py`.
 3. Done — it runs on the `rule` engine with no secrets. (Optionally add
-   `GROQ_API_KEY` or `ANTHROPIC_API_KEY` in the app's Secrets to enable a real
+   `OPENAI_COMPAT_API_KEY` or `ANTHROPIC_API_KEY` in the app's Secrets to enable a real
    LLM engine; the `ollama` engine is local-only and won't run on the Cloud.)
 
 ---
@@ -241,8 +243,8 @@ Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
 - The **`rule`** engine is verified end-to-end against live market data.
 - The **LLM loop** is verified three ways: control flow (unit tests), its real
   network path against a local HTTP server (sockets, JSON, malformed-output
-  recovery), and **end-to-end against a real served model** on Groq
-  (`python scripts/verify_llm_engine.py --engine groq`), where a live model
+  recovery), and **end-to-end against a real served model** via OpenRouter
+  (`python scripts/verify_llm_engine.py --engine openai`), where a live model
   chose tools, read real market data, recovered from a tool error, and produced
   a grounded verdict.
 - What is still **not** measured is LLM reasoning *quality at scale*: there is
