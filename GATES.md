@@ -102,3 +102,10 @@ own voice without AI-slop patterns, inside every stated word limit, plus the
   CHECK: python scripts/verify_pdf_delivered.py
   EXPECT: PDF DELIVERY VERIFICATION PASSED
   EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=8caa235477f7/74 entries; EXPECT=matched; output-sha256=2cd551cc9fc606170bf8474423e0c1fa1193f94752fa4b74863b44c2f41abb93; output-bytes=117
+
+- [x] G12: each chapter title states that chapter's word count against its limit,
+      as the submission form requires, and the stated counts match the measured
+      body text rather than being typed by hand
+  CHECK: python scripts/verify_chapter_counts.py
+  EXPECT: CHAPTER COUNT VERIFICATION PASSED
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=ef52a223beb1e06c1f334fc9a19e297a0feba97601246d263a54a36aea2502c2; output-bytes=384

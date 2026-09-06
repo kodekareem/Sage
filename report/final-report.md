@@ -7,9 +7,12 @@ CM3020 Artificial Intelligence
 
 **Code repository:** https://github.com/kodekareem/Sage (public)
 
+**Total word count:** 7,984 of 10,500. Counts exclude chapter titles, table and
+figure captions, and the reference list, as the brief permits.
+
 ---
 
-## 1. Introduction
+## 1. Introduction (834/1000 words)
 
 ### Project concept
 
@@ -97,7 +100,7 @@ critique of the project as a whole. Chapter 6 concludes.
 
 ---
 
-## 2. Literature Review
+## 2. Literature Review (1527/2500 words)
 
 Sage draws on three bodies of work: domain specific language models for finance,
 the techniques that let language models reason step by step and use external
@@ -256,7 +259,7 @@ verdict. The next chapter describes how this is designed.
 
 ---
 
-## 3. Design
+## 3. Design (1332/2000 words)
 
 Sage is organised as a small set of components, each with a single
 responsibility, connected by one reasoning loop. This chapter describes the data
@@ -398,7 +401,7 @@ verdict. It makes that reasoning visible so it can be judged on its merits.
 
 ---
 
-## 4. Implementation
+## 4. Implementation (1684/2500 words)
 
 The prototype implements every component described in Chapter 3. It is written
 in Python, version controlled on GitHub, and runs against live market data. This
@@ -576,7 +579,7 @@ encoding check reproduces the original fault before asserting the fix.
 
 ---
 
-## 5. Evaluation
+## 5. Evaluation (2033/2500 words)
 
 ### 5.1 What needed evaluating, and why the test suite was not enough
 
@@ -819,7 +822,7 @@ chapter into something closer to a benchmark.
 
 ---
 
-## 6. Conclusion
+## 6. Conclusion (574/1000 words)
 
 Sage set out to show that an investment advisor can reason step by step over
 real financial tools and expose the whole of that reasoning to the user. That
