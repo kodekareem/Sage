@@ -7,7 +7,7 @@ CM3020 Artificial Intelligence
 
 **Code repository:** https://github.com/kodekareem/Sage (public)
 
-**Total word count:** 8,007 of 10,500. Counts exclude chapter titles, table and
+**Total word count:** 8,018 of 10,500. Counts exclude chapter titles, table and
 figure captions, and the reference list, as the brief permits.
 
 ---
@@ -259,7 +259,7 @@ verdict. The next chapter describes how this is designed.
 
 ---
 
-## 3. Design (1356/2000 words)
+## 3. Design (1367/2000 words)
 
 Sage is organised as a small set of components, each with a single
 responsibility, connected by one reasoning loop. This chapter describes the data
@@ -381,7 +381,8 @@ The user types a question and the application shows the final recommendation
 prominently at the top, with its confidence and rationale, followed by the
 reasoning trace as an expandable timeline of thoughts, actions, and
 observations, with comparison results rendered as a table. A sidebar selects the
-engine, shows which engines are available, and lists the tools. The web
+engine, offering only those that can actually run and naming the ones it has
+hidden and why, and lists the tools. The web
 application meets the brief's requirement that a non technical user be able to
 interact with the advisor, and it makes the reasoning trace, the core feature,
 the visual focus of the interface.

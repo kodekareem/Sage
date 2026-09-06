@@ -74,8 +74,8 @@ SAY: Six tools: a quote, price history, technical indicators, fundamentals, a
 comparison, and position sizing. They sit in a registry with machine readable
 descriptions, so adding a tool means writing one function.
 
-SHOW: The engine selector in the sidebar, showing the four options and their
-availability markers.
+SHOW: The engine selector in the sidebar, and the caption beneath it naming
+the engines that are hidden on this deployment.
 
 SAY: Four engines drive the same loop. The default is a deterministic rule
 engine that needs no API key. The other three drive real language models, one

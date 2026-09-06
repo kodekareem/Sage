@@ -142,3 +142,10 @@ own voice without AI-slop patterns, inside every stated word limit, plus the
   CHECK: python scripts/verify_engine_visibility.py
   EXPECT: ENGINE VISIBILITY VERIFICATION PASSED
   EVIDENCE: pending
+
+- [ ] G18: the report, README and video script describe the interface the app
+      actually presents, so a stage direction is never read aloud over footage
+      that contradicts it
+  CHECK: python scripts/verify_ui_descriptions.py
+  EXPECT: UI DESCRIPTION VERIFICATION PASSED
+  EVIDENCE: pending

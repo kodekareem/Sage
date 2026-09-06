@@ -80,7 +80,7 @@ special-case an engine.
 
 | Engine | Description | Needs |
 |---|---|---|
-| **`rule`** (default) | Deterministic, free, no-key. Scripts sensible thoughts, calls the **real** tools in a sensible order against **real** data, records every observation, and derives a transparent buy/sell/hold (or comparison) verdict via bull/bear point scoring. Ties are reported as ties rather than broken arbitrarily. It genuinely walks the loop — it never shortcuts. This is what the deployed demo uses. | Nothing (only `yfinance` network) |
+| **`rule`** (default) | Deterministic, free, no-key. Scripts sensible thoughts, calls the **real** tools in a sensible order against **real** data, records every observation, and derives a transparent buy/sell/hold (or comparison) verdict via bull/bear point scoring. Ties are reported as ties rather than broken arbitrarily. It genuinely walks the loop — it never shortcuts. This is the default, and the only engine that needs nothing at all. | Nothing (only `yfinance` network) |
 | **`ollama`** | A real **local** LLM via [Ollama](https://ollama.com) (e.g. `llama3.2`), prompted to emit Thought/Action/Action-Input that Sage parses and executes. For genuine LLM reasoning at no cost on a local machine. | Ollama running at `localhost:11434` |
 | **`openai`** | Any provider speaking the OpenAI chat-completions protocol — OpenRouter, Groq, Together, a local vLLM server. Defaults to OpenRouter with `minimax/minimax-m3:free`, which is what the reported evaluation used. Rate limits are retried with backoff. | `OPENAI_COMPAT_API_KEY` ([free](https://openrouter.ai)) |
 | **`claude`** | The same hand-rolled loop backed by the Anthropic API. | `ANTHROPIC_API_KEY` |
@@ -219,7 +219,8 @@ Beyond `pytest`, `scripts/` holds checks that verify behaviour directly:
 
 1. Push this repo to GitHub.
 2. Create a new Streamlit app pointing at `app.py`.
-3. Done — it runs on the `rule` engine with no secrets. (Optionally add
+3. Done — with no secrets it runs on the `rule` engine, and the sidebar offers
+   only that engine. (Optionally add
    `OPENAI_COMPAT_API_KEY` or `ANTHROPIC_API_KEY` in the app's Secrets to enable a real
    LLM engine; the `ollama` engine is local-only and won't run on the Cloud.)
 
