@@ -41,21 +41,43 @@ def main() -> None:
     tests = int(match.group(1))
     if proc.returncode != 0:
         fail(f"the test suite does not pass ({tests} passed, exit {proc.returncode})")
-    if str(tests) not in text:
-        fail(f"the report does not state the measured test count ({tests})")
-    print(f"test count {tests}: stated correctly")
+    # Look at the sentences that actually make the claim, not the whole
+    # document. A bare substring search passes on any incidental occurrence of
+    # the number elsewhere (a word count, a line count), so a stale "85 tests"
+    # survived it. Every phrase pairing a number with "test" must use the
+    # measured figure.
+    stated = re.findall(r"(\d[\d,]*)\s+tests?\b", text)
+    if not stated:
+        fail(f"the report never states a test count; it should state {tests}")
+    wrong = sorted({s for s in stated if int(s.replace(",", "")) != tests})
+    if wrong:
+        fail(
+            f"the report states {', '.join(wrong)} tests in "
+            f"{len([s for s in stated if s in wrong])} place(s); the suite has {tests}"
+        )
+    print(f"test count {tests}: stated correctly in {len(stated)} place(s)")
 
     # --- tool library ---------------------------------------------------
     from sage.tools import TOOL_REGISTRY
     tools = sorted(TOOL_REGISTRY)
-    number_words = {6: "six", 7: "seven", 8: "eight"}
+    number_words = {5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine"}
     spelled = number_words.get(len(tools), str(len(tools)))
-    if str(len(tools)) not in text and spelled not in text.lower():
-        fail(f"the report does not state the tool count ({len(tools)})")
+    # Match the phrase that makes the claim, so an unrelated "6" elsewhere in
+    # the document cannot stand in for a correct tool count.
+    stated_tools = re.findall(
+        r"\b(\d+|five|six|seven|eight|nine)\s+(?:financial\s+)?(?:analysis\s+)?tools\b",
+        text, re.IGNORECASE,
+    )
+    if not stated_tools:
+        fail(f"the report never states a tool count; it should state {len(tools)}")
+    for claim in {s.lower() for s in stated_tools}:
+        value = number_words.get(len(tools)) if not claim.isdigit() else str(len(tools))
+        if claim != (spelled if not claim.isdigit() else str(len(tools))):
+            fail(f"the report says '{claim} tools'; the registry holds {len(tools)}")
     missing = [t for t in tools if t not in text]
     if missing:
         fail(f"tools that exist but are never named in the report: {missing}")
-    print(f"{len(tools)} tools: all named")
+    print(f"{len(tools)} tools: count and names both correct")
 
     # --- engines --------------------------------------------------------
     from sage import config
@@ -65,9 +87,22 @@ def main() -> None:
     print(f"{len(config.ENGINES)} engines: all named ({', '.join(config.ENGINES)})")
 
     # --- the step cap ---------------------------------------------------
-    if str(config.MAX_STEPS) not in text:
-        fail(f"the report does not state the step cap ({config.MAX_STEPS})")
-    print(f"step cap {config.MAX_STEPS}: stated")
+    # Again matched in context: the report says the loop is "capped at eight
+    # steps", and a bare "8" appearing anywhere would otherwise satisfy this.
+    cap_words = {8: "eight", 10: "ten", 12: "twelve", 6: "six"}
+    cap_spelled = cap_words.get(config.MAX_STEPS, str(config.MAX_STEPS))
+    stated_caps = re.findall(
+        r"capped at (?:a maximum of )?(\d+|six|eight|ten|twelve)\s+(?:reasoning )?steps",
+        text, re.IGNORECASE,
+    )
+    if not stated_caps:
+        fail(f"the report never states the step cap; it should state {config.MAX_STEPS}")
+    for claim in {c.lower() for c in stated_caps}:
+        ok = claim == str(config.MAX_STEPS) or claim == cap_spelled
+        if not ok:
+            fail(f"the report says the loop is capped at '{claim}' steps; "
+                 f"MAX_STEPS is {config.MAX_STEPS}")
+    print(f"step cap {config.MAX_STEPS}: stated correctly")
 
     print("REPORT CLAIMS VERIFICATION PASSED")
 

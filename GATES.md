@@ -115,4 +115,23 @@ own voice without AI-slop patterns, inside every stated word limit, plus the
       on what it is
   CHECK: python scripts/verify_engine_naming.py
   EXPECT: ENGINE NAMING VERIFICATION PASSED
-  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=958085a51bec76dd091c7fc176778577527e663486d90960300c0c4f409dfb7a; output-bytes=329
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=8186ccdc76b74d4538fce86afb44107ae7c9be93f7477f09cbe66525d4f8f00a; output-bytes=422
+
+- [x] G14: every numeric claim spoken in the video script matches the measured
+      data and the live code, so the narration cannot state a figure that has
+      since moved
+  CHECK: python scripts/verify_video_claims.py
+  EXPECT: VIDEO CLAIMS VERIFICATION PASSED
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=4766040c16a078ef682440a61b9a54dfcb759e8bbdb44c7c657bd208f83e4309; output-bytes=250
+
+- [x] G15: the evidence the report quotes appears verbatim in the stored results,
+      and superseded scorer readings are presented as superseded
+  CHECK: python scripts/verify_report_quotes.py
+  EXPECT: REPORT QUOTES VERIFICATION PASSED
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=f476db49b9c0e8b8172a98616877e7357e908529d32705e116ae79588d1c56f8; output-bytes=154
+
+- [x] G16: every verification script in the repository is executed and passes,
+      so a summary line can never report success while a check is failing
+  CHECK: python scripts/verify_all_checks.py
+  EXPECT: ALL CHECKS VERIFICATION PASSED
+  EVIDENCE: exit=0; shell=C:\WINDOWS\system32\cmd.exe; cwd=C:\Users\pc\sage-project; path=90d2e5011cab/74 entries; EXPECT=matched; output-sha256=f404345d64f9b7f13eea63a6a3a4ed9a01ff52ebc8b9b6ed4ccfda988aa16abd; output-bytes=822
